@@ -37,7 +37,7 @@ const EXAMPLES: ExampleProfile[] = [
       M_total: 108, // 全场最佳60 + 败方最佳48
       gamma_role: 1.20,
     },
-    desc: '某神秘辅助（237场 62.0% 2410分，60全场最佳+48败方最佳，高分肉辅/硬辅路线）',
+    desc: '重庆狼队·紫幻（237场 62.0% 2410分，60全场最佳+48败方最佳）',
   },
   {
     id: 'ex-2',
@@ -55,7 +55,7 @@ const EXAMPLES: ExampleProfile[] = [
       M_total: 20,
       gamma_role: 0.94,
     },
-    desc: '重庆狼队·紫幻（76场 61.8% 1725分，核心法王冲分期）',
+    desc: '？？？（76场 61.8% 1725分，核心冲分期）',
   },
   {
     id: 'ex-3',
@@ -73,7 +73,7 @@ const EXAMPLES: ExampleProfile[] = [
       M_total: 43,
       gamma_role: 1.00,
     },
-    desc: '？？？（261场 47.9% 1610分，场次多且胜率低于50%的瓶颈期代表）',
+    desc: '某神秘辅助（261场 47.9% 1610分，场次多且胜率低于50%的瓶颈期代表）',
   },
   {
     id: 'ex-zongshi',
@@ -256,7 +256,7 @@ export default function App() {
         lineHeight: '1.5',
       }}
     >
-      <div style={{ maxWidth: '740px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '780px', margin: '0 auto' }}>
         {/* Header */}
         <div
           style={{
@@ -954,56 +954,291 @@ export default function App() {
           </table>
         </div>
 
-        {/* Bilibili Video Reference & Notes */}
+        {/* 📘 王者荣耀巅峰赛真实硬实力（R_true）分段动力学算法说明书 */}
         <div
-          id="section-bilibili-reference"
+          id="section-algorithm-manual"
           style={{
-            marginTop: '16px',
-            backgroundColor: '#0f172a',
+            marginTop: '20px',
+            backgroundColor: '#090d16',
             border: '1px solid #1e293b',
-            borderRadius: '8px',
-            padding: '14px 16px',
+            borderRadius: '10px',
+            padding: '20px 22px',
             fontSize: '13px',
-            lineHeight: '1.6',
+            lineHeight: '1.7',
             color: '#cbd5e1',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span style={{ fontSize: '15px' }}>📺</span>
-            <span style={{ fontWeight: 'bold', color: '#38bdf8', fontSize: '14px' }}>
-              算法背景与详细视频说明：
-            </span>
+          {/* Header */}
+          <div style={{ borderBottom: '1px solid #1e293b', paddingBottom: '12px', marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '17px', fontWeight: 'bold', color: '#38bdf8', margin: '0 0 6px 0' }}>
+              📘 王者荣耀巅峰赛真实硬实力（R_true）分段动力学算法说明书
+            </h2>
           </div>
 
-          <div style={{ marginBottom: '8px', wordBreak: 'break-all' }}>
-            <a
-              id="link-bilibili-video"
-              href="https://www.bilibili.com/video/BV14VHZzLEg3/?spm_id_from=333.337.search-card.all.click&vd_source=7d6ef64be58b4b28a1ef9cd9382d7046"
-              target="_blank"
-              rel="noopener noreferrer"
+          {/* Section 1 */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#facc15', marginBottom: '8px' }}>
+              一、 模型核心假设与物理建模
+            </h3>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0', marginBottom: '4px' }}>
+                1. 5v5 团队方差平抑假设（Elo-Logistic 胜率衰减）
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                <li>
+                  <strong>物理机制</strong>：个人仅占 5v5 团队战力的 1/5。单人真实水平 <i>R<sub>true</sub></i> 偏离当前对局分段 <i>S</i> 时，其实时单局胜率 <i>p(S)</i> 服从团队方差平抑后的逻辑斯蒂分布：
+                  <div style={{ backgroundColor: '#131b2e', padding: '6px 12px', borderRadius: '4px', margin: '6px 0', fontFamily: 'monospace', color: '#38bdf8' }}>
+                    p(S) = 1 / [1 + 10^((S - R_true) / D)]
+                  </div>
+                </li>
+                <li>
+                  <strong>战局影响力平抑常数 <i>D</i></strong>：
+                  <div style={{ backgroundColor: '#131b2e', padding: '6px 12px', borderRadius: '4px', margin: '6px 0', fontFamily: 'monospace', color: '#38bdf8' }}>
+                    D = 1600.0 × γ_role
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                    * <i>γ_role</i> 为用户自评的战局影响力系数：<br />
+                    • 吃大量经济的大核心/节奏野王（个人决定胜负方差大）：<i>γ_role &lt; 1.0</i>（<i>D</i> 偏小，胜率对分差更敏感）；<br />
+                    • 让经济的团队肉坦/开团硬辅（胜负依赖团队协同）：<i>γ_role &gt; 1.0</i>（<i>D</i> 偏大，胜率曲线更平缓）；<br />
+                    • 标准均衡打法：<i>γ_role = 1.00</i>（默认基准）。
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0', marginBottom: '4px' }}>
+                2. 能量获取互斥性与 Logit 优势比耦合（β 建模）
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                <li><strong>官方 max 互斥规则</strong>：单局能量按 max(E_五杀, E_金牌, E_银牌, E_MVP) 结算，同局各项不重复叠加；</li>
+                <li>
+                  <strong>50% 胜率中心化 Logit 修正</strong>：为防止负胜率玩家靠输局独吞败方 MVP（SVP）虚假刷分，引入胜率优势比指数：
+                  <div style={{ backgroundColor: '#131b2e', padding: '6px 12px', borderRadius: '4px', margin: '6px 0', fontFamily: 'monospace', color: '#38bdf8' }}>
+                    β = e_bar · e^[γ · (P_bar - 0.5)]   (γ = 2.5)
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                    • P_bar &gt; 50% 时，能量正向升值，认可硬核带飞统治力；<br />
+                    • P_bar &lt; 50% 时，能量向下折损，压制靠输局刷牌子的水分。
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0', marginBottom: '4px' }}>
+                3. 严格分段阶梯阻力模型
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                <li>王者荣耀巅峰能量的掉分抵扣消耗随分段呈严格阶梯式跃迁：</li>
+                <li style={{ listStyleType: 'circle', marginLeft: '16px' }}>1200 ≤ S &lt; 1500：k₁ = 1.0（1点能量抵1分）</li>
+                <li style={{ listStyleType: 'circle', marginLeft: '16px' }}>1500 ≤ S &lt; 1800：k₂ = 2.0（2点能量抵1分）</li>
+                <li style={{ listStyleType: 'circle', marginLeft: '16px' }}>1800 ≤ S &lt; 2100：k₃ = 3.0（3点能量抵1分）</li>
+                <li style={{ listStyleType: 'circle', marginLeft: '16px' }}>S ≥ 2100：k₄ = 4.0（4点能量抵1分）</li>
+                <li><strong>本算法绝不在跨段时做粗糙的算术平均，而是将爬分轨迹严格切分为多个独立区间，分别求出单段解析原函数后求和求解。</strong></li>
+              </ul>
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0', marginBottom: '4px' }}>
+                4. 边界可忽略性公理（大数定律收敛）
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                <li><strong>MMR 加扣分不对等</strong>：在 N &gt; 50 的大样本下，匹配机制的强弱扰动对称抵消，单局净胜得分期望严格收敛于 ±15 分；</li>
+                <li><strong>巅峰能量存储上限</strong>：除极端炸鱼连胜外，绝大多数玩家能量处于“随产随抵”状态，无溢出损耗。</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Section 2 */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#facc15', marginBottom: '8px' }}>
+              二、 符号与参数字典
+            </h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#131b2e', borderBottom: '1px solid #1e293b', color: '#38bdf8' }}>
+                  <th style={{ padding: '6px 10px', textAlign: 'left' }}>符号</th>
+                  <th style={{ padding: '6px 10px', textAlign: 'left' }}>物理含义</th>
+                  <th style={{ padding: '6px 10px', textAlign: 'left' }}>来源 / 算法</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>N</td><td>总对局场次</td><td>面板直接读取</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>P_bar</td><td>面板累计总胜率</td><td>小数形式（如 61.8% 记为 0.618）</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>S_final</td><td>当前巅峰积分</td><td>面板直接读取（≥ 1200）</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>S_0</td><td>初始巅峰底分</td><td>恒定常数 1200.0</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>G</td><td>顶级牌 + 金牌总数</td><td>面板直接读取</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>S_v</td><td>银牌总数</td><td>面板直接读取</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>P_5</td><td>五连绝世（五杀）数</td><td>面板直接读取</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>M_total</td><td>总 MVP 次数</td><td>全场最佳数 + 败方最佳数</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>γ_role</td><td>战局影响力系数</td><td>用户自定义（范围 0.70 ~ 1.50，默认 1.00）</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>D</td><td>团队平抑常数</td><td>D = 1600.0 × γ_role</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>β</td><td>个人支配力系数</td><td>结合官方互斥与 Logit 加权求得</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold', color: '#38bdf8' }}>R_true</td><td style={{ color: '#38bdf8' }}>真实竞技硬实力分</td><td>算法核心输出目标分</td></tr>
+                <tr style={{ borderBottom: '1px solid #1e293b' }}><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>ΔS_water</td><td>积分虚高水分</td><td>ΔS_water = S_final - R_true</td></tr>
+                <tr><td style={{ padding: '5px 10px', fontWeight: 'bold' }}>S_max</td><td>理论最高天花板</td><td>动力学极限平衡点</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Section 3 */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#facc15', marginBottom: '8px' }}>
+              三、 核心数学公式体系
+            </h3>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>1. 个人支配力系数 β 计算公式</div>
+              <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px' }}>
+                <li>纯 MVP 场次（去重）：<code>M_pure = max(0, M_total - G - S_v)</code></li>
+                <li>去重总能量与场均能量：<code>E_total = 6G + 3S_v + 4P_5 + 2M_pure</code>，<code>e_bar = E_total / N</code></li>
+                <li>β 终极表达式：<code>β = e_bar · e^[2.5 · (P_bar - 0.5)]</code></li>
+              </ul>
+            </div>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>2. 官方阶梯阻力分段区间定义</div>
+              <div style={{ fontSize: '12px', margin: '4px 0' }}>
+                分段边界点数组：T = [1200, 1500, 1800, 2100, +∞]<br />
+                有效积分上下界：a_i = max(1200, T_(i-1)), b_i = min(S_final, T_i) （仅对 b_i &gt; a_i 的有效区间求和）
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>3. 严格分段目标方程：f(R_true) = 0</div>
+              <div style={{ backgroundColor: '#131b2e', padding: '6px 12px', borderRadius: '4px', margin: '6px 0', fontFamily: 'monospace', color: '#38bdf8' }}>
+                f(R_true) = ∑ [ F_i(b_i, R_true) - F_i(a_i, R_true) ] - N · P_bar = 0
+              </div>
+              <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                单段严格解析原函数 F_i(S, R_true)：<br />
+                <code>F_i(S, R) = [D / (ln10 · (15 + β/k_i))] · ln | 10^((S-R)/D) / ( 10^((S-R)/D) - (1 + β/(15·k_i)) ) |</code>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>4. 牛顿迭代法导数表达式：f'(R_true)</div>
+              <div style={{ backgroundColor: '#131b2e', padding: '6px 12px', borderRadius: '4px', margin: '6px 0', fontFamily: 'monospace', color: '#38bdf8' }}>
+                R_(n+1) = R_n - f(R_n) / f'(R_n)<br />
+                f'(R_true) = ∑ [ g_i(b_i, R_true) - g_i(a_i, R_true) ]
+              </div>
+              <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                单段导数辅助函数 g_i(S, R_true)：<br />
+                <code>g_i(S, R) = 1 / [ 15 · 10^((S-R)/D) - (15 + β/k_i) ]</code>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>5. 牛顿法初值估计量 R_0</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                k_bar = [1 / (S_final - 1200)] · ∑ k_i (b_i - a_i)<br />
+                λ = 10^[ ((15 + β/k_bar) · N · P_bar - (S_final - 1200)) / D ]<br />
+                <code>R_0 = D · log10 [ (λ · 10^(S_final/D) - 10^(1200/D)) / ((1 + β/(15·k_bar)) · (λ - 1)) ]</code>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>6. 衍生诊断指标</div>
+              <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px', fontSize: '12px' }}>
+                <li>积分虚高水分：<code>ΔS_water = S_final - R_true</code>（&gt;0 代表积分虚高；≤0 代表场次未打满仍处于上升期）</li>
+                <li>理论最高天花板：<code>S_max = R_true + D · log10(1 + β / (15 · k_cur))</code></li>
+                <li>实时单局胜率预测：<code>p(S) = 1 / [1 + 10^((S - R_true) / D)]</code></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Section 4 */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#facc15', marginBottom: '8px' }}>
+              四、 算法计算流程协议（Execution Pipeline）
+            </h3>
+            <pre
               style={{
+                backgroundColor: '#131b2e',
+                border: '1px solid #1e293b',
+                borderRadius: '6px',
+                padding: '12px',
+                fontSize: '11px',
                 color: '#38bdf8',
-                textDecoration: 'underline',
-                fontWeight: '500',
+                overflowX: 'auto',
+                lineHeight: '1.5',
               }}
             >
-              https://www.bilibili.com/video/BV14VHZzLEg3/ (点击跳转 B站原视频)
-            </a>
+{`[步骤 1: 参数输入与预处理]
+  ├─ 读入 N, P_bar, S_final, G, S_v, P_5, M_total, gamma_role
+  └─ 计算平抑常数 D = 1600.0 * gamma_role
+
+[步骤 2: 个人支配力 beta 计算]
+  ├─ 互斥去重得到纯 MVP 场次: M_pure = max(0, M_total - G - S_v)
+  ├─ 计算去重总能量 E_total 与场均能量 e_bar
+  └─ 胜率 Logit 加权: beta = e_bar * exp(2.5 * (P_bar - 0.5))
+
+[步骤 3: 确定有效分段与边界]
+  └─ 对 [1200, 1500, 1800, 2100, +∞] 划分出所有满足 b_i > a_i 的有效分段与对应 k_i
+
+[步骤 4: 牛顿迭代法求解 R_true]
+  ├─ 计算估算初值 R_0
+  └─ 迭代执行 R_{n+1} = R_n - f(R_n) / f'(R_n)，直至收敛（|f(R)| < 1e-6）
+
+[步骤 5: 衍生诊断指标装配]
+  ├─ 计算积分虚高水分: Delta S_{water} = S_final - R_true
+  ├─ 计算理论极限天花板: S_max
+  └─ 计算锚点分段 [1200, 1400, 1500, 1600, 1725, 1800, 2100, S_final] 的实时胜率 p(S)`}
+            </pre>
           </div>
 
-          <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-            上方测试选手战绩示例对应说明：
-            <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px' }}>
-              <li><strong>示例一</strong>：某神秘辅助（237场 62.0% 2410分）</li>
-              <li><strong>示例二</strong>：重庆狼队·紫幻（76场 61.8% 1725分）</li>
-              <li><strong>示例三</strong>：？？？（261场 47.9% 1610分）</li>
-              <li><strong>宗师 2503</strong>：111场 83.8%，顶级7/金34/银24，MVP 54/SVP 7</li>
-              <li><strong>KSG青炎 2248</strong>：143场 67.1%，顶级3/金28/银25，MVP 56/SVP 19</li>
-              <li><strong>小麦 2413</strong>：176场 65.9%，顶级4/金42/银36/五杀1，MVP 54/SVP 19</li>
-              <li><strong>救赎 2304</strong>：261场 61.3%，顶级4/金31/银31，MVP 24/SVP 17</li>
-              <li><strong>一诺 2277</strong>：226场 60.6%，顶级3/金47/银37/五杀1，MVP 68/SVP 32</li>
-              <li><strong>道崽 2230</strong>：560场 55.9%，顶级3/金59/银52/五杀1，MVP 93/SVP 58</li>
-            </ul>
+          {/* Section 5 */}
+          <div>
+            <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#facc15', marginBottom: '8px' }}>
+              五、 算法优劣势与核心局限分析
+            </h3>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 'bold', color: '#4ade80', marginBottom: '4px' }}>
+                1. 算法核心优势
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                <li><strong>严格分段动力学的高保真度</strong>：彻底摒弃跨段平均，精准还原了 1200~1500（1倍抵扣）与 1500+（翻倍抵扣）的阻力跃迁；</li>
+                <li><strong>导数严格解析化</strong>：牛顿法每一步迭代都有闭式解析导数 g_i 支持，收敛速度达二次收敛（通常 3~5 步内精准收敛）；</li>
+                <li><strong>识破刷分伪装</strong>：结合官方 max 去重与 Logit 优势比折损，天然免疫保分型刷子。</li>
+              </ul>
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 'bold', color: '#f87171', marginBottom: '4px' }}>
+                2. 算法核心痛点与致命局限（使用须知）
+              </div>
+              <div
+                style={{
+                  backgroundColor: '#1f1315',
+                  borderLeft: '3px solid #f87171',
+                  padding: '8px 12px',
+                  borderRadius: '0 4px 4px 0',
+                  color: '#fca5a5',
+                  marginBottom: '8px',
+                  fontSize: '12px',
+                }}
+              >
+                <strong>⚠️ 痛点一（最严重！）：【瓶颈期胜率均值回归陷阱】</strong><br />
+                • <strong>机理</strong>：若玩家在自身极限分段（如 1800 分）<strong>长期卡瓶颈滞留（例如打满 200~300 场，胜率被彻底稀释拉平至 50% 附近）</strong>，回溯积分方程会将稀释后的 50% 胜率视作全程表现，导致<strong>测算出的 R_true 严重偏低</strong>；<br />
+                • <strong>黄金测试建议</strong>：<strong>请勿在打满数百场、长期卡在瓶颈期后测试！最佳测试窗口是刚打完冲分期、场次在 50 ~ 150 场以内时测算最为精准。</strong>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: '#1f1315',
+                  borderLeft: '3px solid #fbbf24',
+                  padding: '8px 12px',
+                  borderRadius: '0 4px 4px 0',
+                  color: '#fde68a',
+                  fontSize: '12px',
+                }}
+              >
+                <strong>⚠️ 痛点二：【周末巅峰挑战赛的积分注入失真】</strong><br />
+                • 挑战赛是官方限时发放的场外积分红利。若玩家<strong>极为重度地参与挑战赛并以此冲分</strong>，其 S_final 含有未记录在排位负场中的外生积分，会导致动力学时间方程出现速度偏快，测算出的 R_true 会产生<strong>轻微向上偏置（略微偏高）</strong>。对于此类玩家，可参考纯胜率解耦估算（模式 A）。
+              </div>
+            </div>
           </div>
         </div>
       </div>
