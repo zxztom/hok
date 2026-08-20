@@ -1,6 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { solveDynamics, PlayerStats, CalculationResult, AlgorithmMode } from './engine';
 
+interface ExampleProfile {
+  id: string;
+  name: string;
+  tag: string;
+  color: string;
+  stats: PlayerStats;
+  rawPBar: string;
+  desc?: string;
+}
+
 const PRESETS = [
   { label: '野王/绝对大核', value: 0.88 },
   { label: '中路游走/核心射手', value: 0.94 },
@@ -9,22 +19,180 @@ const PRESETS = [
   { label: '团队肉坦/开团硬辅', value: 1.20 },
 ];
 
+// 所有精选实战示例
+const EXAMPLES: ExampleProfile[] = [
+  {
+    id: 'ex-1',
+    name: '重庆狼队·紫幻',
+    tag: '237场 2410分',
+    color: '#7e22ce',
+    rawPBar: '62.0',
+    stats: {
+      N: 237,
+      P_bar: 0.620,
+      S_final: 2410.0,
+      G: 35,
+      S_v: 25,
+      P_5: 0,
+      M_total: 108, // 全场最佳60 + 败方最佳48
+      gamma_role: 1.20,
+    },
+    desc: '某神秘辅助（237场 62.0% 2410分，60全场最佳+48败方最佳，高分肉辅/硬辅路线）',
+  },
+  {
+    id: 'ex-2',
+    name: '？？？',
+    tag: '76场 1725分',
+    color: '#0369a1',
+    rawPBar: '61.8',
+    stats: {
+      N: 76,
+      P_bar: 0.618,
+      S_final: 1725.0,
+      G: 8,
+      S_v: 8,
+      P_5: 0,
+      M_total: 20,
+      gamma_role: 0.94,
+    },
+    desc: '重庆狼队·紫幻（76场 61.8% 1725分，核心法王冲分期）',
+  },
+  {
+    id: 'ex-3',
+    name: '某神秘辅助',
+    tag: '261场 1610分',
+    color: '#334155',
+    rawPBar: '47.9',
+    stats: {
+      N: 261,
+      P_bar: 0.479,
+      S_final: 1610.0,
+      G: 6,
+      S_v: 13,
+      P_5: 0,
+      M_total: 43,
+      gamma_role: 1.00,
+    },
+    desc: '？？？（261场 47.9% 1610分，场次多且胜率低于50%的瓶颈期代表）',
+  },
+  {
+    id: 'ex-zongshi',
+    name: '宗师 2503',
+    tag: '111场 83.8%',
+    color: '#b45309',
+    rawPBar: '83.8',
+    stats: {
+      N: 111,
+      P_bar: 0.838,
+      S_final: 2503.0,
+      G: 41, // 顶级7 + 金34 = 41
+      S_v: 24,
+      P_5: 0,
+      M_total: 61, // MVP 54 + SVP 7 = 61
+      gamma_role: 0.88,
+    },
+    desc: '宗师 2503分（111场 83.8% 超高胜率通天野王，顶级7/金34/银24，MVP54/SVP7）',
+  },
+  {
+    id: 'ex-qingyan',
+    name: 'KSG青炎 2248',
+    tag: '143场 67.1%',
+    color: '#047857',
+    rawPBar: '67.1',
+    stats: {
+      N: 143,
+      P_bar: 0.671,
+      S_final: 2248.0,
+      G: 31, // 顶级3 + 金28 = 31
+      S_v: 25,
+      P_5: 0,
+      M_total: 75, // MVP 56 + SVP 19 = 75
+      gamma_role: 0.94,
+    },
+    desc: 'KSG青炎 2248分（143场 67.1%，顶级3/金28/银25，MVP56/SVP19）',
+  },
+  {
+    id: 'ex-xiaomai',
+    name: '小麦 2413',
+    tag: '176场 65.9%',
+    color: '#0d9488',
+    rawPBar: '65.9',
+    stats: {
+      N: 176,
+      P_bar: 0.659,
+      S_final: 2413.0,
+      G: 46, // 顶级4 + 金42 = 46
+      S_v: 36,
+      P_5: 1, // 五杀1
+      M_total: 73, // MVP 54 + SVP 19 = 73
+      gamma_role: 0.92,
+    },
+    desc: '小麦 2413分（176场 65.9%，顶级4/金42/银36/五杀1，MVP54/SVP19）',
+  },
+  {
+    id: 'ex-jiushu',
+    name: '救赎 2304',
+    tag: '261场 61.3%',
+    color: '#4338ca',
+    rawPBar: '61.3',
+    stats: {
+      N: 261,
+      P_bar: 0.613,
+      S_final: 2304.0,
+      G: 35, // 顶级4 + 金31 = 35
+      S_v: 31,
+      P_5: 0,
+      M_total: 41, // MVP 24 + SVP 17 = 41
+      gamma_role: 1.20,
+    },
+    desc: '救赎 2304分（261场 61.3% 职业辅助，顶级4/金31/银31，MVP24/SVP17）',
+  },
+  {
+    id: 'ex-yinuo',
+    name: '一诺 2277',
+    tag: '226场 60.6%',
+    color: '#e11d48',
+    rawPBar: '60.6',
+    stats: {
+      N: 226,
+      P_bar: 0.606,
+      S_final: 2277.0,
+      G: 50, // 顶级3 + 金47 = 50
+      S_v: 37,
+      P_5: 1, // 五杀1
+      M_total: 100, // MVP 68 + SVP 32 = 100
+      gamma_role: 0.90,
+    },
+    desc: '一诺 2277分（226场 60.6% 顶级射手大核，顶级3/金47/银37/五杀1，MVP68/SVP32）',
+  },
+  {
+    id: 'ex-daozai',
+    name: '道崽 2230',
+    tag: '560场 55.9%',
+    color: '#6d28d9',
+    rawPBar: '55.9',
+    stats: {
+      N: 560,
+      P_bar: 0.559,
+      S_final: 2230.0,
+      G: 62, // 顶级3 + 金59 = 62
+      S_v: 52,
+      P_5: 1, // 五杀1
+      M_total: 151, // MVP 93 + SVP 58 = 151
+      gamma_role: 0.92,
+    },
+    desc: '道崽 2230分（560场 55.9% 高场次战神，顶级3/金59/银52/五杀1，MVP93/SVP58）',
+  },
+];
+
 export default function App() {
   const [mode, setMode] = useState<AlgorithmMode>('mode_a');
-  const [inputs, setInputs] = useState<PlayerStats>({
-    N: 76,
-    P_bar: 0.618,
-    S_final: 1725.0,
-    G: 8,
-    S_v: 8,
-    P_5: 0,
-    M_total: 20,
-    gamma_role: 1.00,
-  });
-
-  const [rawPBar, setRawPBar] = useState<string>('61.8');
+  const [inputs, setInputs] = useState<PlayerStats>(EXAMPLES[0].stats);
+  const [rawPBar, setRawPBar] = useState<string>(EXAMPLES[0].rawPBar);
+  const [activeExId, setActiveExId] = useState<string>(EXAMPLES[0].id);
 
   const handleInputChange = (field: keyof PlayerStats, value: string) => {
+    setActiveExId('');
     if (field === 'P_bar') {
       setRawPBar(value);
       const num = parseFloat(value);
@@ -50,47 +218,10 @@ export default function App() {
     }));
   };
 
-  const loadExample1 = () => {
-    setInputs({
-      N: 76,
-      P_bar: 0.618,
-      S_final: 1725.0,
-      G: 8,
-      S_v: 8,
-      P_5: 0,
-      M_total: 20,
-      gamma_role: 1.00,
-    });
-    setRawPBar('61.8');
-  };
-
-  const loadExample2 = () => {
-    setInputs({
-      N: 261,
-      P_bar: 0.479,
-      S_final: 1610.0,
-      G: 6,
-      S_v: 13,
-      P_5: 0,
-      M_total: 43,
-      gamma_role: 1.00,
-    });
-    setRawPBar('47.9');
-  };
-
-  const loadExample2410 = () => {
-    // 237场 62.0% 2410分 (全场最佳60 + 败方最佳48 = 108, 0五杀)
-    setInputs({
-      N: 237,
-      P_bar: 0.620,
-      S_final: 2410.0,
-      G: 35,
-      S_v: 25,
-      P_5: 0,
-      M_total: 108,
-      gamma_role: 1.00,
-    });
-    setRawPBar('62.0');
+  const loadExample = (ex: ExampleProfile) => {
+    setInputs(ex.stats);
+    setRawPBar(ex.rawPBar);
+    setActiveExId(ex.id);
   };
 
   const clearInputs = () => {
@@ -105,6 +236,7 @@ export default function App() {
       gamma_role: 1.00,
     });
     setRawPBar('50.0');
+    setActiveExId('');
   };
 
   const result: CalculationResult = useMemo(() => {
@@ -124,7 +256,7 @@ export default function App() {
         lineHeight: '1.5',
       }}
     >
-      <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '740px', margin: '0 auto' }}>
         {/* Header */}
         <div
           style={{
@@ -133,7 +265,7 @@ export default function App() {
             alignItems: 'center',
             borderBottom: '1px solid #1e293b',
             paddingBottom: '12px',
-            marginBottom: '16px',
+            marginBottom: '14px',
             flexWrap: 'wrap',
             gap: '8px',
           }}
@@ -151,73 +283,75 @@ export default function App() {
               王者荣耀战绩硬分逆推计算器
             </h1>
             <span style={{ fontSize: '12px', color: '#64748b' }}>
-              Dual-Engine 双模式架构
+              Dual-Engine 双模式架构 (支持全量职业/路人战绩测算)
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            <button
-              id="btn-example-2410"
-              onClick={loadExample2410}
-              style={{
-                backgroundColor: '#7e22ce',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '6px 10px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 'bold',
-              }}
-            >
-              示例 (237场2410分)
-            </button>
-            <button
-              id="btn-example-1"
-              onClick={loadExample1}
-              style={{
-                backgroundColor: '#0369a1',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '6px 10px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 'bold',
-              }}
-            >
-              示例 (76场1725分)
-            </button>
-            <button
-              id="btn-example-2"
-              onClick={loadExample2}
-              style={{
-                backgroundColor: '#1e293b',
-                color: '#38bdf8',
-                border: '1px solid #0284c7',
-                borderRadius: '6px',
-                padding: '6px 10px',
-                cursor: 'pointer',
-                fontSize: '12px',
-              }}
-            >
-              示例 (261场1610分)
-            </button>
-            <button
-              id="btn-clear"
-              onClick={clearInputs}
-              style={{
-                backgroundColor: '#1e293b',
-                color: '#94a3b8',
-                border: '1px solid #334155',
-                borderRadius: '6px',
-                padding: '6px 10px',
-                cursor: 'pointer',
-                fontSize: '12px',
-              }}
-            >
-              清空
-            </button>
+          <button
+            id="btn-clear"
+            onClick={clearInputs}
+            style={{
+              backgroundColor: '#1e293b',
+              color: '#94a3b8',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            清空输入
+          </button>
+        </div>
+
+        {/* 快捷示例选择区 (精选实战数据) */}
+        <div
+          id="section-example-selector"
+          style={{
+            backgroundColor: '#090d16',
+            border: '1px solid #1e293b',
+            borderRadius: '8px',
+            padding: '10px 12px',
+            marginBottom: '14px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'bold' }}>
+              🎯 快捷载入测试选手战绩：
+            </span>
+            <span style={{ fontSize: '11px', color: '#64748b' }}>
+              点击即刻自动填入完整战绩与分路系数
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {EXAMPLES.map((ex) => {
+              const isSelected = activeExId === ex.id;
+              return (
+                <button
+                  key={ex.id}
+                  id={`btn-${ex.id}`}
+                  onClick={() => loadExample(ex)}
+                  style={{
+                    backgroundColor: isSelected ? ex.color : '#1e293b',
+                    color: isSelected ? '#ffffff' : '#cbd5e1',
+                    border: isSelected ? '1px solid #ffffff' : '1px solid #334155',
+                    borderRadius: '6px',
+                    padding: '5px 9px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: isSelected ? 'bold' : 'normal',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <span>{ex.name}</span>
+                  <span style={{ opacity: 0.8, fontSize: '11px' }}>({ex.tag})</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -477,7 +611,7 @@ export default function App() {
                 type="number"
                 value={inputs.N === 0 ? '' : inputs.N}
                 onChange={(e) => handleInputChange('N', e.target.value)}
-                placeholder="如: 76"
+                placeholder="如: 237"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -503,7 +637,7 @@ export default function App() {
                   type="text"
                   value={rawPBar}
                   onChange={(e) => handleInputChange('P_bar', e.target.value)}
-                  placeholder="如: 61.8"
+                  placeholder="如: 62.0"
                   style={{
                     backgroundColor: '#1e293b',
                     color: '#ffffff',
@@ -531,7 +665,7 @@ export default function App() {
                 step="0.1"
                 value={inputs.S_final === 0 ? '' : inputs.S_final}
                 onChange={(e) => handleInputChange('S_final', e.target.value)}
-                placeholder="如: 1725"
+                placeholder="如: 2410"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -556,7 +690,7 @@ export default function App() {
                 type="number"
                 value={inputs.G}
                 onChange={(e) => handleInputChange('G', e.target.value)}
-                placeholder="如: 8"
+                placeholder="顶级+金牌合计数"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -581,7 +715,7 @@ export default function App() {
                 type="number"
                 value={inputs.S_v}
                 onChange={(e) => handleInputChange('S_v', e.target.value)}
-                placeholder="如: 8"
+                placeholder="银牌数"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -624,14 +758,14 @@ export default function App() {
             {/* M_total */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-M_total" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                总MVP数 (胜方+败方)
+                总MVP数 (胜方MVP+败方SVP)
               </label>
               <input
                 id="input-M_total"
                 type="number"
                 value={inputs.M_total}
                 onChange={(e) => handleInputChange('M_total', e.target.value)}
-                placeholder="如: 20"
+                placeholder="MVP+SVP合计数"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -818,6 +952,59 @@ export default function App() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Bilibili Video Reference & Notes */}
+        <div
+          id="section-bilibili-reference"
+          style={{
+            marginTop: '16px',
+            backgroundColor: '#0f172a',
+            border: '1px solid #1e293b',
+            borderRadius: '8px',
+            padding: '14px 16px',
+            fontSize: '13px',
+            lineHeight: '1.6',
+            color: '#cbd5e1',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '15px' }}>📺</span>
+            <span style={{ fontWeight: 'bold', color: '#38bdf8', fontSize: '14px' }}>
+              算法背景与详细视频说明：
+            </span>
+          </div>
+
+          <div style={{ marginBottom: '8px', wordBreak: 'break-all' }}>
+            <a
+              id="link-bilibili-video"
+              href="https://www.bilibili.com/video/BV14VHZzLEg3/?spm_id_from=333.337.search-card.all.click&vd_source=7d6ef64be58b4b28a1ef9cd9382d7046"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: '#38bdf8',
+                textDecoration: 'underline',
+                fontWeight: '500',
+              }}
+            >
+              https://www.bilibili.com/video/BV14VHZzLEg3/ (点击跳转 B站原视频)
+            </a>
+          </div>
+
+          <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+            上方测试选手战绩示例对应说明：
+            <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px' }}>
+              <li><strong>示例一</strong>：某神秘辅助（237场 62.0% 2410分）</li>
+              <li><strong>示例二</strong>：重庆狼队·紫幻（76场 61.8% 1725分）</li>
+              <li><strong>示例三</strong>：？？？（261场 47.9% 1610分）</li>
+              <li><strong>宗师 2503</strong>：111场 83.8%，顶级7/金34/银24，MVP 54/SVP 7</li>
+              <li><strong>KSG青炎 2248</strong>：143场 67.1%，顶级3/金28/银25，MVP 56/SVP 19</li>
+              <li><strong>小麦 2413</strong>：176场 65.9%，顶级4/金42/银36/五杀1，MVP 54/SVP 19</li>
+              <li><strong>救赎 2304</strong>：261场 61.3%，顶级4/金31/银31，MVP 24/SVP 17</li>
+              <li><strong>一诺 2277</strong>：226场 60.6%，顶级3/金47/银37/五杀1，MVP 68/SVP 32</li>
+              <li><strong>道崽 2230</strong>：560场 55.9%，顶级3/金59/银52/五杀1，MVP 93/SVP 58</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

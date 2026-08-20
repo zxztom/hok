@@ -281,7 +281,7 @@ export class DualEngineRankAnalyzer {
   }
 
   public static _get_tier_win_rates(R_true: number, D: number, S_final: number): Record<string, string> {
-    const scores = [1200, 1400, 1500, 1600, 1725, 1800, 2100, 2410, Math.round(S_final)];
+    const scores = [1200, 1400, 1500, 1600, 1725, 1800, 2100, 2250, 2400, 2500, Math.round(S_final)];
     const res: Record<string, string> = {};
     for (const s of Array.from(new Set(scores)).sort((a, b) => a - b)) {
       const p = 1.0 / (1.0 + Math.pow(10.0, (s - R_true) / D));
@@ -291,7 +291,7 @@ export class DualEngineRankAnalyzer {
   }
 
   public static _get_win_rate_list(R_true: number, D: number, S_final: number): { score: number; label: string; rate: number }[] {
-    const scores = [1200, 1400, 1500, 1600, 1725, 1800, 2100, 2410, Math.round(S_final)];
+    const scores = [1200, 1400, 1500, 1600, 1725, 1800, 2100, 2250, 2400, 2500, Math.round(S_final)];
     const unique = Array.from(new Set(scores)).sort((a, b) => a - b);
     return unique.map((s) => {
       const p = 1.0 / (1.0 + Math.pow(10.0, (s - R_true) / D));
