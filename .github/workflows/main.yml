@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main"] # 如果你的主分支是 master，请改成 master
+    branches: ["main", "master"]
   workflow_dispatch:
 
 permissions:
@@ -27,13 +27,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22 # 👈 升级到 Node 22 LTS，消除废弃警告
+          node-version: 22
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Install dependencies
-        run: npm install # 👈 改用 npm install，不再依赖 lockfile
+        run: npm install
 
       - name: Build
         run: npm run build

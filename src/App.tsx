@@ -1,6 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { solveDynamics, PlayerInput, CalculationResult } from './engine';
 
+const PRESETS = [
+  { label: '野王/绝对大核（极高影响）', value: 0.88 },
+  { label: '中路游走/核心射手（高影响）', value: 0.94 },
+  { label: '全能/均衡打法（默认基准）', value: 1.00 },
+  { label: '对抗路战士/单带（中等影响）', value: 1.05 },
+  { label: '团队肉坦/开团硬辅（低个人支配）', value: 1.20 },
+];
+
 export default function App() {
   const [inputs, setInputs] = useState<PlayerInput>({
     N: 261,
@@ -10,6 +18,7 @@ export default function App() {
     S_v: 13,
     P_5: 0,
     M_total: 43,
+    gamma_role: 1.00,
   });
 
   const [rawPBar, setRawPBar] = useState<string>('47.9');
@@ -33,6 +42,13 @@ export default function App() {
     }
   };
 
+  const handleGammaPreset = (val: number) => {
+    setInputs((prev) => ({
+      ...prev,
+      gamma_role: val,
+    }));
+  };
+
   const loadExample = () => {
     setInputs({
       N: 261,
@@ -42,6 +58,7 @@ export default function App() {
       S_v: 13,
       P_5: 0,
       M_total: 43,
+      gamma_role: 1.00,
     });
     setRawPBar('47.9');
   };
@@ -55,6 +72,7 @@ export default function App() {
       S_v: 0,
       P_5: 0,
       M_total: 0,
+      gamma_role: 1.00,
     });
     setRawPBar('50.0');
   };
@@ -76,7 +94,7 @@ export default function App() {
         lineHeight: '1.5',
       }}
     >
-      <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
         {/* Header */}
         <div
           style={{
@@ -137,7 +155,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Highlighted Real Hard-Score Hero Banner */}
+        {/* Real Hard-Score Hero Banner */}
         <div
           id="hero-r-true"
           style={{
@@ -416,6 +434,98 @@ export default function App() {
                 }}
               />
             </div>
+
+            {/* gamma_role Input */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label htmlFor="input-gamma_role" style={{ fontWeight: '500', color: '#e2e8f0' }}>
+                战局影响力系数 (γ_role)
+              </label>
+              <input
+                id="input-gamma_role"
+                type="number"
+                step="0.01"
+                min="0.70"
+                max="1.50"
+                value={inputs.gamma_role}
+                onChange={(e) => handleInputChange('gamma_role', e.target.value)}
+                placeholder="1.00"
+                style={{
+                  backgroundColor: '#1e293b',
+                  color: '#38bdf8',
+                  border: '1px solid #38bdf8',
+                  borderRadius: '4px',
+                  padding: '6px 10px',
+                  width: '120px',
+                  textAlign: 'right',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* gamma_role Presets Matrix */}
+          <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #1e293b' }}>
+            <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '500' }}>
+              快捷填充分位预设：
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {PRESETS.map((preset) => {
+                const isActive = Math.abs(inputs.gamma_role - preset.value) < 0.001;
+                return (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => handleGammaPreset(preset.value)}
+                    style={{
+                      backgroundColor: isActive ? '#0284c7' : '#1e293b',
+                      color: isActive ? '#ffffff' : '#cbd5e1',
+                      border: isActive ? '1px solid #38bdf8' : '1px solid #334155',
+                      borderRadius: '4px',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      fontWeight: isActive ? 'bold' : 'normal',
+                    }}
+                  >
+                    {preset.label}: <span style={{ color: isActive ? '#fff' : '#38bdf8', fontWeight: 'bold' }}>{preset.value.toFixed(2)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Full Explanation Text for gamma_role (Required to display completely) */}
+          <div
+            style={{
+              marginTop: '12px',
+              backgroundColor: '#090d16',
+              border: '1px solid #1e293b',
+              borderRadius: '6px',
+              padding: '10px 12px',
+              fontSize: '12px',
+              color: '#94a3b8',
+              lineHeight: '1.6',
+            }}
+          >
+            <div style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '4px' }}>
+              战局影响力系数（γ_role）说明：
+            </div>
+            <div>
+              该系数用于评估你个人打法对整局胜负的决定力。<strong>数值越小，代表你个人对战局的影响越大；数值越大，代表个人影响越平缓</strong>。
+            </div>
+            <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px' }}>
+              <li>
+                <strong>填小一点（0.85 ~ 0.95）</strong>：吃大量团队经济的大核心、带节奏野王、单带通天边路（你的发挥直接左右比赛胜负）；
+              </li>
+              <li>
+                <strong>填大一点（1.10 ~ 1.30）</strong>：不吃钱的开团硬辅、让经济的团队肉坦、蓝领工具人（胜负更多依赖团队协同，个人方差较小）；
+              </li>
+              <li>
+                <strong>默认参考值（1.00）</strong>：标准均衡/全能打法。
+              </li>
+            </ul>
           </div>
         </div>
 
