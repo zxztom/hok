@@ -1,0 +1,6 @@
+{
+  "name": "王者荣耀战绩动力学逆推计算器",
+  "description": "基于5v5团队ELO动力学模型与牛顿迭代法，从王者荣耀面板数据逆推真实竞技水平硬分与关键胜率指标的极简计算器",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

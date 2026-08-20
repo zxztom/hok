@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+html, body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, monospace;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+input, button, select, table {
+  font-family: inherit;
+  font-size: 13px;
+}
