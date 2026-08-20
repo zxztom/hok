@@ -1,29 +1,30 @@
 import React, { useState, useMemo } from 'react';
-import { solveDynamics, PlayerInput, CalculationResult } from './engine';
+import { solveDynamics, PlayerStats, CalculationResult, AlgorithmMode } from './engine';
 
 const PRESETS = [
-  { label: '野王/绝对大核（极高影响）', value: 0.88 },
-  { label: '中路游走/核心射手（高影响）', value: 0.94 },
-  { label: '全能/均衡打法（默认基准）', value: 1.00 },
-  { label: '对抗路战士/单带（中等影响）', value: 1.05 },
-  { label: '团队肉坦/开团硬辅（低个人支配）', value: 1.20 },
+  { label: '野王/绝对大核', value: 0.88 },
+  { label: '中路游走/核心射手', value: 0.94 },
+  { label: '全能/均衡打法（默认）', value: 1.00 },
+  { label: '对抗路战士/单带', value: 1.05 },
+  { label: '团队肉坦/开团硬辅', value: 1.20 },
 ];
 
 export default function App() {
-  const [inputs, setInputs] = useState<PlayerInput>({
-    N: 261,
-    P_bar: 0.479,
-    S_final: 1610.0,
-    G: 6,
-    S_v: 13,
+  const [mode, setMode] = useState<AlgorithmMode>('mode_a');
+  const [inputs, setInputs] = useState<PlayerStats>({
+    N: 76,
+    P_bar: 0.618,
+    S_final: 1725.0,
+    G: 8,
+    S_v: 8,
     P_5: 0,
-    M_total: 43,
+    M_total: 20,
     gamma_role: 1.00,
   });
 
-  const [rawPBar, setRawPBar] = useState<string>('47.9');
+  const [rawPBar, setRawPBar] = useState<string>('61.8');
 
-  const handleInputChange = (field: keyof PlayerInput, value: string) => {
+  const handleInputChange = (field: keyof PlayerStats, value: string) => {
     if (field === 'P_bar') {
       setRawPBar(value);
       const num = parseFloat(value);
@@ -49,7 +50,21 @@ export default function App() {
     }));
   };
 
-  const loadExample = () => {
+  const loadExample1 = () => {
+    setInputs({
+      N: 76,
+      P_bar: 0.618,
+      S_final: 1725.0,
+      G: 8,
+      S_v: 8,
+      P_5: 0,
+      M_total: 20,
+      gamma_role: 1.00,
+    });
+    setRawPBar('61.8');
+  };
+
+  const loadExample2 = () => {
     setInputs({
       N: 261,
       P_bar: 0.479,
@@ -78,8 +93,8 @@ export default function App() {
   };
 
   const result: CalculationResult = useMemo(() => {
-    return solveDynamics(inputs);
-  }, [inputs]);
+    return solveDynamics(inputs, mode);
+  }, [inputs, mode]);
 
   return (
     <div
@@ -94,7 +109,7 @@ export default function App() {
         lineHeight: '1.5',
       }}
     >
-      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '700px', margin: '0 auto' }}>
         {/* Header */}
         <div
           style={{
@@ -108,34 +123,54 @@ export default function App() {
             gap: '8px',
           }}
         >
-          <h1
-            style={{
-              fontSize: '18px',
-              fontWeight: 'bold',
-              color: '#38bdf8',
-              margin: 0,
-              letterSpacing: '0.5px',
-            }}
-          >
-            王者荣耀战绩硬分逆推计算器
-          </h1>
+          <div>
+            <h1
+              style={{
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: '#38bdf8',
+                margin: 0,
+                letterSpacing: '0.5px',
+              }}
+            >
+              王者荣耀战绩硬分逆推计算器
+            </h1>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
+              Dual-Engine 双模式架构
+            </span>
+          </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
             <button
-              id="btn-example"
-              onClick={loadExample}
+              id="btn-example-1"
+              onClick={loadExample1}
               style={{
                 backgroundColor: '#0369a1',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '6px',
-                padding: '6px 12px',
+                padding: '6px 10px',
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: 'bold',
               }}
             >
-              载入示例
+              示例 (76场61.8%)
+            </button>
+            <button
+              id="btn-example-2"
+              onClick={loadExample2}
+              style={{
+                backgroundColor: '#1e293b',
+                color: '#38bdf8',
+                border: '1px solid #0284c7',
+                borderRadius: '6px',
+                padding: '6px 10px',
+                cursor: 'pointer',
+                fontSize: '12px',
+              }}
+            >
+              示例 (261场47.9%)
             </button>
             <button
               id="btn-clear"
@@ -155,12 +190,141 @@ export default function App() {
           </div>
         </div>
 
+        {/* 1. 算法模式切换器（置于表单最顶部） */}
+        <div
+          id="mode-selector"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '12px',
+            marginBottom: '12px',
+          }}
+        >
+          {/* 模式 A */}
+          <div
+            id="option-mode-a"
+            onClick={() => setMode('mode_a')}
+            style={{
+              backgroundColor: mode === 'mode_a' ? '#0f2744' : '#0f172a',
+              border: mode === 'mode_a' ? '2px solid #38bdf8' : '1px solid #334155',
+              borderRadius: '8px',
+              padding: '12px 14px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              boxShadow: mode === 'mode_a' ? '0 0 16px rgba(56, 189, 248, 0.2)' : 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <input
+                type="radio"
+                name="algorithm_mode"
+                checked={mode === 'mode_a'}
+                onChange={() => setMode('mode_a')}
+                style={{ accentColor: '#38bdf8', cursor: 'pointer' }}
+              />
+              <span
+                style={{
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  color: mode === 'mode_a' ? '#38bdf8' : '#e2e8f0',
+                }}
+              >
+                模式 A：简易算法
+              </span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  backgroundColor: '#0284c7',
+                  color: '#ffffff',
+                  padding: '1px 6px',
+                  borderRadius: '3px',
+                  fontWeight: 'bold',
+                }}
+              >
+                免疫挑战赛
+              </span>
+            </div>
+            <div style={{ fontSize: '12px', color: '#94a3b8', paddingLeft: '24px', lineHeight: '1.4' }}>
+              简单直接只看胜率，不受周末挑战赛加分影响，适合绝大多数玩家。
+            </div>
+          </div>
+
+          {/* 模式 B */}
+          <div
+            id="option-mode-b"
+            onClick={() => setMode('mode_b')}
+            style={{
+              backgroundColor: mode === 'mode_b' ? '#20164d' : '#0f172a',
+              border: mode === 'mode_b' ? '2px solid #a855f7' : '1px solid #334155',
+              borderRadius: '8px',
+              padding: '12px 14px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              boxShadow: mode === 'mode_b' ? '0 0 16px rgba(168, 85, 247, 0.2)' : 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <input
+                type="radio"
+                name="algorithm_mode"
+                checked={mode === 'mode_b'}
+                onChange={() => setMode('mode_b')}
+                style={{ accentColor: '#a855f7', cursor: 'pointer' }}
+              />
+              <span
+                style={{
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  color: mode === 'mode_b' ? '#c084fc' : '#e2e8f0',
+                }}
+              >
+                模式 B：zxz 的智慧结晶
+              </span>
+            </div>
+            <div style={{ fontSize: '12px', color: '#94a3b8', paddingLeft: '24px', lineHeight: '1.4' }}>
+              算上了金银牌与 MVP 加成；<strong>打了很多周末挑战赛的玩家不能用（会算高）</strong>。
+            </div>
+          </div>
+        </div>
+
+        {/* 2. 精简选型说明与核心警告 */}
+        <div
+          id="alert-box-guidelines"
+          style={{
+            backgroundColor: '#090d16',
+            border: '1px solid #1e293b',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            marginBottom: '16px',
+            fontSize: '12px',
+            lineHeight: '1.5',
+            color: '#cbd5e1',
+          }}
+        >
+          <div style={{ marginBottom: '6px' }}>
+            💡 <strong>说明</strong>：模式 A 是简易算法（免疫挑战赛干扰）；模式 B 是 zxz 的智慧结晶（挑战赛占比较大时不能使用）。<strong>注：两种模式下挑战赛都会增加预期分数</strong>。
+          </div>
+          <div
+            style={{
+              backgroundColor: '#1f1315',
+              borderLeft: '3px solid #f87171',
+              padding: '6px 10px',
+              borderRadius: '0 4px 4px 0',
+              color: '#fca5a5',
+            }}
+          >
+            ⚠️ <strong>警告</strong>：长期处于<strong>瓶颈期</strong>以及<strong>极端高分高场次</strong>（等效瓶颈、长时间 50% 胜率），均会导致测算结果偏低。建议在刚结束冲分期测算。
+          </div>
+        </div>
+
         {/* Real Hard-Score Hero Banner */}
         <div
           id="hero-r-true"
           style={{
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
-            border: '2px solid #6366f1',
+            background: mode === 'mode_a'
+              ? 'linear-gradient(135deg, #0f172a 0%, #0c4a6e 100%)'
+              : 'linear-gradient(135deg, #0f172a 0%, #3b0764 100%)',
+            border: mode === 'mode_a' ? '2px solid #38bdf8' : '2px solid #a855f7',
             borderRadius: '10px',
             padding: '16px 20px',
             marginBottom: '16px',
@@ -169,22 +333,38 @@ export default function App() {
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: '16px',
-            boxShadow: '0 4px 20px rgba(99, 102, 241, 0.15)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+            transition: 'all 0.3s ease',
           }}
         >
           <div>
-            <div style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '500' }}>
-              真实竞技硬分 (R_true)
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '500' }}>
+                真实竞技硬分 (R_true)
+              </span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  backgroundColor: mode === 'mode_a' ? '#0369a1' : '#6b21a8',
+                  color: '#ffffff',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontWeight: 'bold',
+                }}
+              >
+                {result.mode}
+              </span>
             </div>
+
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' }}>
               <span
                 id="display-r-true"
                 style={{
                   fontSize: '40px',
                   fontWeight: '900',
-                  color: '#38bdf8',
+                  color: mode === 'mode_a' ? '#38bdf8' : '#c084fc',
                   lineHeight: '1',
-                  textShadow: '0 0 16px rgba(56, 189, 248, 0.4)',
+                  textShadow: '0 0 16px rgba(56, 189, 248, 0.3)',
                 }}
               >
                 {result.R_true.toFixed(2)}
@@ -212,10 +392,10 @@ export default function App() {
               <span
                 style={{
                   fontWeight: 'bold',
-                  color: result.delta_S_water > 0 ? '#f87171' : '#4ade80',
+                  color: result.water > 0 ? '#f87171' : '#4ade80',
                 }}
               >
-                {result.delta_S_water > 0 ? `+${result.delta_S_water.toFixed(2)}` : result.delta_S_water.toFixed(2)} 分
+                {result.water > 0 ? `+${result.water.toFixed(2)}` : result.water.toFixed(2)} 分
               </span>
             </div>
             <div>
@@ -259,14 +439,14 @@ export default function App() {
             {/* N */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-N" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                总场次
+                总场次 (N)
               </label>
               <input
                 id="input-N"
                 type="number"
                 value={inputs.N === 0 ? '' : inputs.N}
                 onChange={(e) => handleInputChange('N', e.target.value)}
-                placeholder="如: 261"
+                placeholder="如: 76"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -284,7 +464,7 @@ export default function App() {
             {/* P_bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-P_bar" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                面板总胜率
+                面板总胜率 (P_bar)
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <input
@@ -292,7 +472,7 @@ export default function App() {
                   type="text"
                   value={rawPBar}
                   onChange={(e) => handleInputChange('P_bar', e.target.value)}
-                  placeholder="如: 47.9"
+                  placeholder="如: 61.8"
                   style={{
                     backgroundColor: '#1e293b',
                     color: '#ffffff',
@@ -312,7 +492,7 @@ export default function App() {
             {/* S_final */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-S_final" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                当前巅峰积分
+                当前巅峰积分 (S_final)
               </label>
               <input
                 id="input-S_final"
@@ -320,7 +500,7 @@ export default function App() {
                 step="0.1"
                 value={inputs.S_final === 0 ? '' : inputs.S_final}
                 onChange={(e) => handleInputChange('S_final', e.target.value)}
-                placeholder="如: 1610"
+                placeholder="如: 1725"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -338,14 +518,14 @@ export default function App() {
             {/* G */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-G" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                顶级牌 + 金牌数
+                顶级牌 + 金牌数 (G)
               </label>
               <input
                 id="input-G"
                 type="number"
                 value={inputs.G}
                 onChange={(e) => handleInputChange('G', e.target.value)}
-                placeholder="如: 6"
+                placeholder="如: 8"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -363,14 +543,14 @@ export default function App() {
             {/* S_v */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-S_v" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                银牌数
+                银牌数 (S_v)
               </label>
               <input
                 id="input-S_v"
                 type="number"
                 value={inputs.S_v}
                 onChange={(e) => handleInputChange('S_v', e.target.value)}
-                placeholder="如: 13"
+                placeholder="如: 8"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -388,7 +568,7 @@ export default function App() {
             {/* P_5 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-P_5" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                五连绝世数 (五杀)
+                五连绝世数 (五杀 P_5)
               </label>
               <input
                 id="input-P_5"
@@ -420,7 +600,7 @@ export default function App() {
                 type="number"
                 value={inputs.M_total}
                 onChange={(e) => handleInputChange('M_total', e.target.value)}
-                placeholder="如: 43"
+                placeholder="如: 20"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -436,10 +616,25 @@ export default function App() {
             </div>
 
             {/* gamma_role Input */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="input-gamma_role" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                战局影响力系数 (γ_role)
-              </label>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: '#131e33',
+                padding: '8px 10px',
+                borderRadius: '6px',
+                border: '1px solid #38bdf8',
+              }}
+            >
+              <div>
+                <label htmlFor="input-gamma_role" style={{ fontWeight: 'bold', color: '#38bdf8' }}>
+                  战局影响力系数 (γ_role)
+                </label>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  ★ 可按打法自由调整
+                </div>
+              </div>
               <input
                 id="input-gamma_role"
                 type="number"
@@ -452,7 +647,7 @@ export default function App() {
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#38bdf8',
-                  border: '1px solid #38bdf8',
+                  border: '1.5px solid #38bdf8',
                   borderRadius: '4px',
                   padding: '6px 10px',
                   width: '120px',
@@ -464,14 +659,19 @@ export default function App() {
             </div>
           </div>
 
-          {/* gamma_role Presets Matrix */}
+          {/* gamma_role Notice & Presets Matrix */}
           <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #1e293b' }}>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '500' }}>
-              快捷填充分位预设：
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '13px', color: '#38bdf8', fontWeight: 'bold' }}>
+                👉 γ_role 系数完全支持自行调整（快捷预设点选）：
+              </span>
+              <span style={{ fontSize: '11px', color: '#cbd5e1' }}>
+                大核单带填小（0.85~0.95），蓝领肉坦硬辅填大（1.10~1.25）
+              </span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {PRESETS.map((preset) => {
-                const isActive = Math.abs(inputs.gamma_role - preset.value) < 0.001;
+                const isActive = Math.abs((inputs.gamma_role ?? 1.0) - preset.value) < 0.001;
                 return (
                   <button
                     key={preset.value}
@@ -495,38 +695,6 @@ export default function App() {
               })}
             </div>
           </div>
-
-          {/* Full Explanation Text for gamma_role (Required to display completely) */}
-          <div
-            style={{
-              marginTop: '12px',
-              backgroundColor: '#090d16',
-              border: '1px solid #1e293b',
-              borderRadius: '6px',
-              padding: '10px 12px',
-              fontSize: '12px',
-              color: '#94a3b8',
-              lineHeight: '1.6',
-            }}
-          >
-            <div style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '4px' }}>
-              战局影响力系数（γ_role）说明：
-            </div>
-            <div>
-              该系数用于评估你个人打法对整局胜负的决定力。<strong>数值越小，代表你个人对战局的影响越大；数值越大，代表个人影响越平缓</strong>。
-            </div>
-            <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px' }}>
-              <li>
-                <strong>填小一点（0.85 ~ 0.95）</strong>：吃大量团队经济的大核心、带节奏野王、单带通天边路（你的发挥直接左右比赛胜负）；
-              </li>
-              <li>
-                <strong>填大一点（1.10 ~ 1.30）</strong>：不吃钱的开团硬辅、让经济的团队肉坦、蓝领工具人（胜负更多依赖团队协同，个人方差较小）；
-              </li>
-              <li>
-                <strong>默认参考值（1.00）</strong>：标准均衡/全能打法。
-              </li>
-            </ul>
-          </div>
         </div>
 
         {/* Win Rate Forecast Table */}
@@ -548,7 +716,7 @@ export default function App() {
               marginBottom: '10px',
             }}
           >
-            各巅峰分段单局胜率预测
+            各巅峰分段单局胜率预测 ({result.mode})
           </div>
 
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center' }}>
