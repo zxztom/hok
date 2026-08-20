@@ -5,13 +5,11 @@ on:
     branches: ["main"] # 如果你的主分支是 master，请改成 master
   workflow_dispatch:
 
-# 设置 GITHUB_TOKEN 的权限以允许部署到 GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# 允许一个并发部署
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -29,14 +27,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: "npm"
+          node-version: 22 # 👈 升级到 Node 22 LTS，消除废弃警告
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install # 👈 改用 npm install，不再依赖 lockfile
 
       - name: Build
         run: npm run build
