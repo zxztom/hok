@@ -78,6 +78,21 @@ export default function App() {
     setRawPBar('47.9');
   };
 
+  const loadExample2410 = () => {
+    // 237场 62.0% 2410分 (全场最佳60 + 败方最佳48 = 108, 0五杀)
+    setInputs({
+      N: 237,
+      P_bar: 0.620,
+      S_final: 2410.0,
+      G: 35,
+      S_v: 25,
+      P_5: 0,
+      M_total: 108,
+      gamma_role: 1.00,
+    });
+    setRawPBar('62.0');
+  };
+
   const clearInputs = () => {
     setInputs({
       N: 0,
@@ -140,7 +155,23 @@ export default function App() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <button
+              id="btn-example-2410"
+              onClick={loadExample2410}
+              style={{
+                backgroundColor: '#7e22ce',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 10px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 'bold',
+              }}
+            >
+              示例 (237场2410分)
+            </button>
             <button
               id="btn-example-1"
               onClick={loadExample1}
@@ -155,7 +186,7 @@ export default function App() {
                 fontWeight: 'bold',
               }}
             >
-              示例 (76场61.8%)
+              示例 (76场1725分)
             </button>
             <button
               id="btn-example-2"
@@ -170,7 +201,7 @@ export default function App() {
                 fontSize: '12px',
               }}
             >
-              示例 (261场47.9%)
+              示例 (261场1610分)
             </button>
             <button
               id="btn-clear"
