@@ -143,18 +143,6 @@ export default function AlgorithmManual({ currentMEP = 1.8, currentPBar = 0.62 }
               真实竞技硬实力分 (S_true) 的计算
             </h2>
           </div>
-          <span
-            style={{
-              fontSize: '12px',
-              backgroundColor: 'rgba(45, 212, 191, 0.15)',
-              color: '#5eead4',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              border: '1px solid rgba(45, 212, 191, 0.3)',
-            }}
-          >
-            全量动力学闭式路径积分方程
-          </span>
         </div>
 
         {/* S_true LaTeX 渲染 */}
