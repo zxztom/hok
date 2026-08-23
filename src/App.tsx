@@ -129,58 +129,99 @@ const EXAMPLES: ExampleProfile[] = [
   },
 ];
 
-export default function App() {
-  const [inputs, setInputs] = useState<PlayerStats>(EXAMPLES[0].stats);
-  const [rawPBar, setRawPBar] = useState<string>(EXAMPLES[0].rawPBar);
-  const [activeExId, setActiveExId] = useState<string>(EXAMPLES[0].id);
+interface RawFormInputs {
+  S_final: string;
+  N: string;
+  P_bar: string;
+  P_5: string;
+  G: string;
+  S_v: string;
+}
 
-  const handleInputChange = (field: keyof PlayerStats, value: string) => {
+export default function App() {
+  // 进入时的输入框清空
+  const [rawInputs, setRawInputs] = useState<RawFormInputs>({
+    S_final: '',
+    N: '',
+    P_bar: '',
+    P_5: '',
+    G: '',
+    S_v: '',
+  });
+  const [activeExId, setActiveExId] = useState<string>('');
+
+  const handleInputChange = (field: keyof RawFormInputs, value: string) => {
     setActiveExId('');
-    if (field === 'P_bar') {
-      setRawPBar(value);
-      const num = parseFloat(value);
-      if (!isNaN(num)) {
-        setInputs((prev) => ({
-          ...prev,
-          P_bar: num > 1 ? num / 100 : num,
-        }));
-      }
-    } else {
-      const num = parseFloat(value);
-      setInputs((prev) => ({
-        ...prev,
-        [field]: isNaN(num) ? 0 : num,
-      }));
-    }
+    setRawInputs((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const loadExample = (ex: ExampleProfile) => {
-    setInputs(ex.stats);
-    setRawPBar(ex.rawPBar);
+    setRawInputs({
+      S_final: String(ex.stats.S_final),
+      N: String(ex.stats.N),
+      P_bar: ex.rawPBar,
+      P_5: String(ex.stats.P_5),
+      G: String(ex.stats.G),
+      S_v: String(ex.stats.S_v),
+    });
     setActiveExId(ex.id);
   };
 
+  // 清空应该把输入框清空，不是填0或者分数
   const clearInputs = () => {
-    setInputs({
-      N: 0,
-      P_bar: 0.5,
-      S_final: 1200.0,
-      G: 0,
-      S_v: 0,
-      P_5: 0,
+    setRawInputs({
+      S_final: '',
+      N: '',
+      P_bar: '',
+      P_5: '',
+      G: '',
+      S_v: '',
     });
-    setRawPBar('50.0');
     setActiveExId('');
   };
 
-  const result: CalculationResult = useMemo(() => {
-    return solveDynamics(inputs);
-  }, [inputs]);
+  // 解析输入并检验是否就绪
+  const parsedInputs: PlayerStats = useMemo(() => {
+    const S_final = parseFloat(rawInputs.S_final) || 0;
+    const N = parseInt(rawInputs.N, 10) || 0;
+    const pNum = parseFloat(rawInputs.P_bar) || 0;
+    const P_bar = pNum > 1 ? pNum / 100 : pNum;
+    const P_5 = parseInt(rawInputs.P_5, 10) || 0;
+    const G = parseInt(rawInputs.G, 10) || 0;
+    const S_v = parseInt(rawInputs.S_v, 10) || 0;
+
+    return {
+      S_final,
+      N,
+      P_bar,
+      P_5,
+      G,
+      S_v,
+    };
+  }, [rawInputs]);
+
+  const isReady = useMemo(() => {
+    const s = parseFloat(rawInputs.S_final);
+    const n = parseInt(rawInputs.N, 10);
+    const p = parseFloat(rawInputs.P_bar);
+    return !isNaN(s) && s > 0 && !isNaN(n) && n > 0 && !isNaN(p) && p > 0;
+  }, [rawInputs]);
+
+  const result: CalculationResult | null = useMemo(() => {
+    if (!isReady) return null;
+    return solveDynamics(parsedInputs);
+  }, [parsedInputs, isReady]);
 
   // 全局通用基准参数计算
   const baseParams = useMemo(() => {
-    return RankDynamicsAnalyzer.calculate_base_params(inputs);
-  }, [inputs]);
+    if (!isReady) {
+      return { P_bar: 0.62, M_EP: 1.8, k_F: 450 };
+    }
+    return RankDynamicsAnalyzer.calculate_base_params(parsedInputs);
+  }, [parsedInputs, isReady]);
 
   // 判断场均能量高于/低于全服平均 1.8
   const mepDiff = baseParams.M_EP - 1.8;
@@ -382,7 +423,7 @@ export default function App() {
                     textShadow: '0 0 14px rgba(45, 212, 191, 0.3)',
                   }}
                 >
-                  {result.R_true.toFixed(2)}
+                  {isReady && result ? result.R_true.toFixed(2) : '--'}
                 </span>
                 <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>分</span>
               </div>
@@ -393,7 +434,7 @@ export default function App() {
               id="card-water"
               style={{
                 backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                border: result.water > 0 ? '1.5px solid rgba(248, 113, 113, 0.45)' : '1.5px solid rgba(74, 222, 128, 0.45)',
+                border: isReady && result ? (result.water > 0 ? '1.5px solid rgba(248, 113, 113, 0.45)' : '1.5px solid rgba(74, 222, 128, 0.45)') : '1.5px solid rgba(148, 163, 184, 0.25)',
                 borderRadius: '8px',
                 padding: '10px 12px',
                 display: 'flex',
@@ -411,12 +452,12 @@ export default function App() {
                     fontWeight: 'bold',
                     padding: '1px 5px',
                     borderRadius: '4px',
-                    backgroundColor: result.water > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
-                    color: result.water > 0 ? '#fca5a5' : '#86efac',
-                    border: result.water > 0 ? '1px solid rgba(248, 113, 113, 0.3)' : '1px solid rgba(74, 222, 128, 0.3)',
+                    backgroundColor: isReady && result ? (result.water > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)') : 'rgba(148, 163, 184, 0.15)',
+                    color: isReady && result ? (result.water > 0 ? '#fca5a5' : '#86efac') : '#94a3b8',
+                    border: isReady && result ? (result.water > 0 ? '1px solid rgba(248, 113, 113, 0.3)' : '1px solid rgba(74, 222, 128, 0.3)') : '1px solid rgba(148, 163, 184, 0.2)',
                   }}
                 >
-                  {result.water > 0 ? '虚高水分' : '被低估实分'}
+                  {isReady && result ? (result.water > 0 ? '虚高水分' : '被低估实分') : '待测算'}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '4px' }}>
@@ -425,11 +466,11 @@ export default function App() {
                   style={{
                     fontSize: '34px',
                     fontWeight: '900',
-                    color: result.water > 0 ? '#f87171' : '#4ade80',
+                    color: isReady && result ? (result.water > 0 ? '#f87171' : '#4ade80') : '#94a3b8',
                     lineHeight: '1.1',
                   }}
                 >
-                  {result.water > 0 ? `+${result.water.toFixed(2)}` : `${result.water.toFixed(2)}`}
+                  {isReady && result ? (result.water > 0 ? `+${result.water.toFixed(2)}` : `${result.water.toFixed(2)}`) : '--'}
                 </span>
                 <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>分</span>
               </div>
@@ -476,7 +517,7 @@ export default function App() {
                     textShadow: '0 0 14px rgba(245, 158, 11, 0.25)',
                   }}
                 >
-                  {result.S_max.toFixed(2)}
+                  {isReady && result ? result.S_max.toFixed(2) : '--'}
                 </span>
                 <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>分</span>
               </div>
@@ -522,7 +563,7 @@ export default function App() {
                     lineHeight: '1.1',
                   }}
                 >
-                  {inputs.S_final}
+                  {rawInputs.S_final ? rawInputs.S_final : '--'}
                 </span>
                 <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>分</span>
               </div>
@@ -539,7 +580,7 @@ export default function App() {
               flexWrap: 'wrap',
               gap: '8px 14px',
               backgroundColor: 'rgba(15, 23, 42, 0.85)',
-              border: baseParams.M_EP >= 1.8 ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid rgba(251, 146, 60, 0.5)',
+              border: isReady ? (baseParams.M_EP >= 1.8 ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid rgba(251, 146, 60, 0.5)') : '1px solid #334155',
               borderRadius: '8px',
               padding: '8px 14px',
             }}
@@ -547,14 +588,16 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ color: '#94a3b8', fontSize: '12px' }}>场均能量产出：</span>
               <strong style={{ color: '#38bdf8', fontSize: '15px' }}>
-                M_E/P = {baseParams.M_EP.toFixed(3)}
+                M_E/P = {isReady ? baseParams.M_EP.toFixed(3) : '--'}
               </strong>
               <span style={{ color: '#64748b', fontSize: '11px' }}>
                 (全服基准均值: 1.800)
               </span>
-              <span style={{ color: mepDiff >= 0 ? '#4ade80' : '#fb923c', fontWeight: 'bold', fontSize: '12px' }}>
-                {mepDiff >= 0 ? `+${mepDiff.toFixed(2)} (${mepRatio}x 均值)` : `${mepDiff.toFixed(2)} (${mepRatio}x 均值)`}
-              </span>
+              {isReady && (
+                <span style={{ color: mepDiff >= 0 ? '#4ade80' : '#fb923c', fontWeight: 'bold', fontSize: '12px' }}>
+                  {mepDiff >= 0 ? `+${mepDiff.toFixed(2)} (${mepRatio}x 均值)` : `${mepDiff.toFixed(2)} (${mepRatio}x 均值)`}
+                </span>
+              )}
             </div>
 
             <span
@@ -563,12 +606,32 @@ export default function App() {
                 padding: '2px 8px',
                 borderRadius: '4px',
                 fontWeight: 'bold',
-                backgroundColor: baseParams.M_EP >= 2.0 ? 'rgba(56, 189, 248, 0.2)' : baseParams.M_EP >= 1.7 ? 'rgba(45, 212, 191, 0.15)' : 'rgba(251, 146, 60, 0.2)',
-                color: baseParams.M_EP >= 2.0 ? '#38bdf8' : baseParams.M_EP >= 1.7 ? '#2dd4bf' : '#fb923c',
-                border: baseParams.M_EP >= 2.0 ? '1px solid #38bdf8' : baseParams.M_EP >= 1.7 ? '1px solid #2dd4bf' : '1px solid #fb923c',
+                backgroundColor: !isReady
+                  ? 'rgba(148, 163, 184, 0.15)'
+                  : baseParams.M_EP >= 2.0
+                  ? 'rgba(56, 189, 248, 0.2)'
+                  : baseParams.M_EP >= 1.7
+                  ? 'rgba(45, 212, 191, 0.15)'
+                  : 'rgba(251, 146, 60, 0.2)',
+                color: !isReady
+                  ? '#94a3b8'
+                  : baseParams.M_EP >= 2.0
+                  ? '#38bdf8'
+                  : baseParams.M_EP >= 1.7
+                  ? '#2dd4bf'
+                  : '#fb923c',
+                border: !isReady
+                  ? '1px solid #475569'
+                  : baseParams.M_EP >= 2.0
+                  ? '1px solid #38bdf8'
+                  : baseParams.M_EP >= 1.7
+                  ? '1px solid #2dd4bf'
+                  : '1px solid #fb923c',
               }}
             >
-              {baseParams.M_EP >= 2.1
+              {!isReady
+                ? '等待输入战绩数据'
+                : baseParams.M_EP >= 2.1
                 ? '🔥 极强核心 Carry 型玩家'
                 : baseParams.M_EP >= 1.8
                 ? '⚡ 偏 Carry 进攻型玩家'
@@ -616,9 +679,8 @@ export default function App() {
                 id="input-S_final"
                 type="number"
                 step="0.1"
-                value={inputs.S_final === 0 ? '' : inputs.S_final}
+                value={rawInputs.S_final}
                 onChange={(e) => handleInputChange('S_final', e.target.value)}
-                placeholder="如: 2410"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -642,9 +704,8 @@ export default function App() {
                 id="input-N"
                 type="number"
                 min="1"
-                value={inputs.N === 0 ? '' : inputs.N}
+                value={rawInputs.N}
                 onChange={(e) => handleInputChange('N', e.target.value)}
-                placeholder="如: 237"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -662,15 +723,14 @@ export default function App() {
             {/* 3. P_bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-P_bar" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                3. 面板总胜率 (P̄)
+                3. 面板胜率 (P̄(s))
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <input
                   id="input-P_bar"
                   type="text"
-                  value={rawPBar}
+                  value={rawInputs.P_bar}
                   onChange={(e) => handleInputChange('P_bar', e.target.value)}
-                  placeholder="如: 62.0"
                   style={{
                     backgroundColor: '#1e293b',
                     color: '#ffffff',
@@ -696,9 +756,8 @@ export default function App() {
                 id="input-P_5"
                 type="number"
                 min="0"
-                value={inputs.P_5}
+                value={rawInputs.P_5}
                 onChange={(e) => handleInputChange('P_5', e.target.value)}
-                placeholder="如: 0"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -722,9 +781,8 @@ export default function App() {
                 id="input-G"
                 type="number"
                 min="0"
-                value={inputs.G}
+                value={rawInputs.G}
                 onChange={(e) => handleInputChange('G', e.target.value)}
-                placeholder="顶级+金牌合计数"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -748,9 +806,8 @@ export default function App() {
                 id="input-S_v"
                 type="number"
                 min="0"
-                value={inputs.S_v}
+                value={rawInputs.S_v}
                 onChange={(e) => handleInputChange('S_v', e.target.value)}
-                placeholder="银牌数"
                 style={{
                   backgroundColor: '#1e293b',
                   color: '#ffffff',
@@ -769,11 +826,12 @@ export default function App() {
 
         {/* 各巅峰分段单局胜率预测看板 (交互式图表 + 数据明细) */}
         <WinRateChart
-          STrue={result.R_true}
-          SPresent={inputs.S_final}
-          SMax={result.S_max}
-          kF={result.k_F}
-          winRatesList={result.win_rates}
+          hasData={isReady && result !== null}
+          STrue={result ? result.R_true : 0}
+          SPresent={parsedInputs.S_final}
+          SMax={result ? result.S_max : 0}
+          kF={result ? result.k_F : 450}
+          winRatesList={result ? result.win_rates : []}
         />
 
         {/* 算法数学模型与动力学微积分推导体系 */}

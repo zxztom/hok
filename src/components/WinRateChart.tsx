@@ -6,6 +6,7 @@ interface WinRateChartProps {
   SMax: number;
   kF: number;
   winRatesList: { score: number; label: string; rate: number }[];
+  hasData?: boolean;
 }
 
 export default function WinRateChart({
@@ -14,15 +15,20 @@ export default function WinRateChart({
   SMax,
   kF,
   winRatesList,
+  hasData = true,
 }: WinRateChartProps) {
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
   const [hoverScore, setHoverScore] = useState<number | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
+  const safeSTrue = STrue > 0 ? STrue : 1200;
+  const safeKF = kF > 0 ? kF : 450;
+  const isValid = hasData && STrue > 0;
+
   // 计算图表 X 轴范围
   const minScore = 1200;
-  const maxScore = Math.max(2600, Math.ceil(Math.max(SPresent, SMax, STrue + 200) / 100) * 100 + 100);
+  const maxScore = Math.max(2600, Math.ceil(Math.max(SPresent || 0, SMax || 0, safeSTrue + 200) / 100) * 100 + 100);
 
   // SVG 视图尺寸
   const width = 760;
@@ -42,24 +48,25 @@ export default function WinRateChart({
   };
 
   const getRateAtScore = (score: number) => {
-    return (1.0 / (1.0 + Math.pow(10.0, (score - STrue) / kF))) * 100;
+    return (1.0 / (1.0 + Math.pow(10.0, (score - safeSTrue) / safeKF))) * 100;
   };
 
   // 生成平滑曲线点
   const curvePoints = useMemo(() => {
+    if (!isValid) return [];
     const points: { x: number; y: number; score: number; rate: number }[] = [];
     const step = 10;
     for (let s = minScore; s <= maxScore; s += step) {
-      const rate = getRateAtScore(s);
+      const rate = (1.0 / (1.0 + Math.pow(10.0, (s - safeSTrue) / safeKF))) * 100;
       points.push({
         score: s,
         rate,
-        x: getX(s),
-        y: getY(rate),
+        x: padding.left + ((s - minScore) / (maxScore - minScore)) * plotWidth,
+        y: padding.top + (1 - rate / 100) * plotHeight,
       });
     }
     return points;
-  }, [STrue, kF, minScore, maxScore, plotWidth, plotHeight]);
+  }, [isValid, safeSTrue, safeKF, minScore, maxScore, plotWidth, plotHeight, padding.left, padding.top]);
 
   // 生成 SVG 路径
   const pathD = useMemo(() => {
@@ -86,6 +93,29 @@ export default function WinRateChart({
     }
     return ticks;
   }, [maxScore]);
+
+  if (!isValid) {
+    return (
+      <div
+        id="section-winrate-forecast"
+        style={{
+          backgroundColor: '#0f172a',
+          border: '1px solid #334155',
+          borderRadius: '8px',
+          padding: '24px 16px',
+          marginBottom: '16px',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#e2e8f0', marginBottom: '8px' }}>
+          📈 各巅峰分段单局胜率预测动态曲线
+        </div>
+        <div style={{ fontSize: '13px', color: '#94a3b8' }}>
+          💡 等待输入以生成交互式胜率预测曲线。
+        </div>
+      </div>
+    );
+  }
 
   // Y 轴刻度
   const yTicks = [0, 25, 50, 75, 100];
