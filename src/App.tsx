@@ -723,7 +723,7 @@ export default function App() {
             {/* 3. P_bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-P_bar" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                3. 面板胜率 (P̄(s))
+                3. 面板胜率 (<span style={{ textDecoration: 'overline', textDecorationThickness: '1.5px', textUnderlineOffset: '2px' }}>P(s)</span>)
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <input

@@ -17,3 +17,18 @@ input, button, select, table {
   font-family: inherit;
   font-size: 13px;
 }
+
+/* 确保 KaTeX 的 \overline 和顶部均值横线在暗色模式与各种屏幕下均清晰可见且不被过细省略 */
+.katex .overline .overline-line,
+.katex .overline-line {
+  border-bottom-width: 1.8px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: currentColor !important;
+  display: block !important;
+  min-height: 1.5px !important;
+  opacity: 1 !important;
+}
+
+.katex .accent {
+  border-bottom-width: 1.8px !important;
+}
