@@ -3,7 +3,7 @@
  * 
  * 依据手稿全量微积分动力学数学建模：
  * 1. 能量增长率 dE/dN 动态分段函数
- * 2. M_{E/P} = (10*PS + 6*G + 3*SV) / N，k_F = 900 * (1.8 / M_{E/P})
+ * 2. M_{E/P} = (10*PS + 6*G + 3*SV) / N，k_F = 450 * (1.8 / (M_{E/P} * P_bar))
  * 3. 速度方程 ds/dN = 30*P(s) - 15 + (dE/dN)/k(s)
  * 4. 场数积分方程 N = \int_{1200}^{S_{present}} \frac{1}{v(s)} ds，数值试出 S_true
  * 5. 内置物理超光速熔断安全机制
@@ -222,8 +222,8 @@ export class RankDynamicsAnalyzer {
     let M_EP = N > 0 ? (10.0 * PS + 6.0 * G + 3.0 * SV) / N : 0.0;
     M_EP = Math.max(0.01, M_EP); // 兜底保护
 
-    // 2. 动态 ELO 常数 k_F = 900 * (1.8 / M_EP)
-    const k_F = 900.0 * (1.8 / M_EP);
+    // 2. 动态 ELO 常数 k_F = 450 * (1.8 / (M_EP * P_bar))
+    const k_F = 450.0 * (1.8 / (M_EP * P_bar));
 
     return { P_bar, M_EP, k_F };
   }

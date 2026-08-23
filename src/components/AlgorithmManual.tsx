@@ -19,10 +19,10 @@ $$\\frac{dE}{dN} = \\begin{cases} \\dfrac{M_{E/P}}{\\overline{P(s)}} P(s) & P(s)
 
 $$M_{E/P} = \\frac{10\\text{PS} + 6\\text{G} + 3\\text{SV}}{N}$$
 
-* **建模理论：** $k_F$ 与场均能量产出 $M_{E/P}$ 紧密关联
+* **建模理论：** $k_F$ 与场均能量产出 $M_{E/P}$ 及面板胜率 $\\overline{P(s)}$ 紧密关联
 * $M_{E/P}$ 全服均值约为 $1.800$
 * 隐式 ELO 离散度：
-  $$k_F = 900 \\times \\dfrac{1.8N}{10\\text{PS} + 6\\text{G} + 3\\text{SV}}$$
+  $$k_F = 450 \\times \\dfrac{1.8N}{(10\\text{PS} + 6\\text{G} + 3\\text{SV}) \\cdot \\overline{P(s)}}$$
 
 ---
 

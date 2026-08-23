@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { solveDynamics, PlayerStats, CalculationResult, RankDynamicsAnalyzer } from './engine';
 import AlgorithmManual from './components/AlgorithmManual';
-import myImage from './1.jpg';
 import WinRateChart from './components/WinRateChart';
 
 interface ExampleProfile {
