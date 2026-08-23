@@ -782,7 +782,6 @@ export default function App() {
           currentMEP={baseParams.M_EP}
           currentPBar={baseParams.P_bar}
         />
-        <img src={myImage} alt="11" />;
       </div>
     </div>
   );

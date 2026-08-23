@@ -199,18 +199,6 @@ export default function AlgorithmManual({ currentMEP = 1.8, currentPBar = 0.62 }
               理论最高分 (S_max) 的计算
             </h2>
           </div>
-          <span
-            style={{
-              fontSize: '12px',
-              backgroundColor: 'rgba(245, 158, 11, 0.15)',
-              color: '#fcd34d',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-            }}
-          >
-            上分速度归零（ds/dN = 0）极限代数方程
-          </span>
         </div>
 
         {/* S_max LaTeX 渲染 */}
