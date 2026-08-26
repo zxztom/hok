@@ -671,7 +671,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* 基础战绩数据输入表单 */}
+        {/* 基础战绩数据输入表单 与 上赛季继承分规则 */}
         <div
           id="section-inputs"
           style={{
@@ -689,219 +689,302 @@ export default function App() {
               color: '#2dd4bf',
               borderBottom: '1px solid #1e293b',
               paddingBottom: '8px',
-              marginBottom: '12px',
+              marginBottom: '14px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px',
             }}
           >
-            <span>基础战绩数据</span>
+            <span>基础战绩数据输入</span>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'normal' }}>
+              支持手动输入或点击右侧继承规则快捷填入
+            </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px 20px' }}>
-            {/* 1. S_present */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="input-S_final" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                1. 当前巅峰积分 (S_present)
-              </label>
-              <input
-                id="input-S_final"
-                type="number"
-                step="0.1"
-                value={rawInputs.S_final}
-                onChange={(e) => handleInputChange('S_final', e.target.value)}
-                style={{
-                  backgroundColor: '#1e293b',
-                  color: '#ffffff',
-                  border: '1px solid #38bdf8',
-                  borderRadius: '4px',
-                  padding: '6px 10px',
-                  width: '120px',
-                  textAlign: 'right',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                }}
-              />
-            </div>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'stretch' }}>
+            {/* 左侧：输入字段 */}
+            <div style={{ flex: '1 1 520px', minWidth: '280px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '12px 18px' }}>
+                {/* 1. S_present */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label htmlFor="input-S_final" style={{ fontWeight: '500', color: '#e2e8f0' }}>
+                    1. 当前巅峰积分 (S_present)
+                  </label>
+                  <input
+                    id="input-S_final"
+                    type="number"
+                    step="0.1"
+                    value={rawInputs.S_final}
+                    onChange={(e) => handleInputChange('S_final', e.target.value)}
+                    style={{
+                      backgroundColor: '#1e293b',
+                      color: '#ffffff',
+                      border: '1px solid #38bdf8',
+                      borderRadius: '4px',
+                      padding: '6px 10px',
+                      width: '110px',
+                      textAlign: 'right',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                    }}
+                  />
+                </div>
 
-            {/* 2. 定级赛分数 / 继承分数 (可选切换) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontWeight: '500', color: '#e2e8f0' }}>2. 起始基准</span>
-                <select
-                  id="select-baseline-type"
-                  value={rawInputs.baselineType}
-                  onChange={(e) => handleInputChange('baselineType', e.target.value)}
-                  style={{
-                    backgroundColor: '#1e293b',
-                    color: '#38bdf8',
-                    border: '1px solid #0284c7',
-                    borderRadius: '4px',
-                    padding: '2px 6px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="placement">定级赛分数</option>
-                  <option value="inherited">继承分数</option>
-                </select>
+                {/* 2. 定级赛分数 / 继承分数 (可选切换) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontWeight: '500', color: '#e2e8f0' }}>2. 起始基准</span>
+                    <select
+                      id="select-baseline-type"
+                      value={rawInputs.baselineType}
+                      onChange={(e) => handleInputChange('baselineType', e.target.value)}
+                      style={{
+                        backgroundColor: '#1e293b',
+                        color: '#38bdf8',
+                        border: '1px solid #0284c7',
+                        borderRadius: '4px',
+                        padding: '2px 6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="placement">定级赛分数</option>
+                      <option value="inherited">继承分数</option>
+                    </select>
+                  </div>
+                  <input
+                    id="input-S_placement"
+                    type="number"
+                    step="1"
+                    placeholder=""
+                    value={rawInputs.S_placement}
+                    onChange={(e) => handleInputChange('S_placement', e.target.value)}
+                    style={{
+                      backgroundColor: '#1e293b',
+                      color: '#ffffff',
+                      border: '1px solid #38bdf8',
+                      borderRadius: '4px',
+                      padding: '6px 10px',
+                      width: '110px',
+                      textAlign: 'right',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                    }}
+                  />
+                </div>
+
+                {/* 3. N */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label htmlFor="input-N" style={{ fontWeight: '500', color: '#e2e8f0' }}>
+                    3. 总场次 (N{rawInputs.baselineType === 'placement' ? ', 含定级赛' : ''})
+                  </label>
+                  <input
+                    id="input-N"
+                    type="number"
+                    min="1"
+                    value={rawInputs.N}
+                    onChange={(e) => handleInputChange('N', e.target.value)}
+                    style={{
+                      backgroundColor: '#1e293b',
+                      color: '#ffffff',
+                      border: '1px solid #38bdf8',
+                      borderRadius: '4px',
+                      padding: '6px 10px',
+                      width: '110px',
+                      textAlign: 'right',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                    }}
+                  />
+                </div>
+
+                {/* 4. P_bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label htmlFor="input-P_bar" style={{ fontWeight: '500', color: '#e2e8f0' }}>
+                    4. 面板胜率 (<span style={{ textDecoration: 'overline', textDecorationThickness: '1.5px', textUnderlineOffset: '2px' }}>P(s)</span>)
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input
+                      id="input-P_bar"
+                      type="text"
+                      value={rawInputs.P_bar}
+                      onChange={(e) => handleInputChange('P_bar', e.target.value)}
+                      style={{
+                        backgroundColor: '#1e293b',
+                        color: '#ffffff',
+                        border: '1px solid #38bdf8',
+                        borderRadius: '4px',
+                        padding: '6px 10px',
+                        width: '90px',
+                        textAlign: 'right',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                      }}
+                    />
+                    <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>%</span>
+                  </div>
+                </div>
+
+                {/* 5. PS (五连绝世) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <label htmlFor="input-P_5" style={{ fontWeight: '500', color: '#e2e8f0', display: 'block' }}>
+                      5. 五连绝世数 (PS)
+                    </label>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>提示：去除定级赛的数量</span>
+                  </div>
+                  <input
+                    id="input-P_5"
+                    type="number"
+                    min="0"
+                    value={rawInputs.P_5}
+                    onChange={(e) => handleInputChange('P_5', e.target.value)}
+                    style={{
+                      backgroundColor: '#1e293b',
+                      color: '#ffffff',
+                      border: '1px solid #38bdf8',
+                      borderRadius: '4px',
+                      padding: '6px 10px',
+                      width: '110px',
+                      textAlign: 'right',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                    }}
+                  />
+                </div>
+
+                {/* 6. G (顶级牌+金牌) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <label htmlFor="input-G" style={{ fontWeight: '500', color: '#e2e8f0', display: 'block' }}>
+                      6. 顶级牌 + 金牌数 (G)
+                    </label>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>提示：去除定级赛的数量</span>
+                  </div>
+                  <input
+                    id="input-G"
+                    type="number"
+                    min="0"
+                    value={rawInputs.G}
+                    onChange={(e) => handleInputChange('G', e.target.value)}
+                    style={{
+                      backgroundColor: '#1e293b',
+                      color: '#ffffff',
+                      border: '1px solid #38bdf8',
+                      borderRadius: '4px',
+                      padding: '6px 10px',
+                      width: '110px',
+                      textAlign: 'right',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                    }}
+                  />
+                </div>
+
+                {/* 7. SV (银牌) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <label htmlFor="input-S_v" style={{ fontWeight: '500', color: '#e2e8f0', display: 'block' }}>
+                      7. 银牌数 (SV)
+                    </label>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>提示：去除定级赛的数量</span>
+                  </div>
+                  <input
+                    id="input-S_v"
+                    type="number"
+                    min="0"
+                    value={rawInputs.S_v}
+                    onChange={(e) => handleInputChange('S_v', e.target.value)}
+                    style={{
+                      backgroundColor: '#1e293b',
+                      color: '#ffffff',
+                      border: '1px solid #38bdf8',
+                      borderRadius: '4px',
+                      padding: '6px 10px',
+                      width: '110px',
+                      textAlign: 'right',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                    }}
+                  />
+                </div>
               </div>
-              <input
-                id="input-S_placement"
-                type="number"
-                step="1"
-                placeholder=""
-                value={rawInputs.S_placement}
-                onChange={(e) => handleInputChange('S_placement', e.target.value)}
-                style={{
-                  backgroundColor: '#1e293b',
-                  color: '#ffffff',
-                  border: '1px solid #38bdf8',
-                  borderRadius: '4px',
-                  padding: '6px 10px',
-                  width: '120px',
-                  textAlign: 'right',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                }}
-              />
             </div>
 
-            {/* 3. N */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="input-N" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                3. 总场次 (N{rawInputs.baselineType === 'placement' ? ', 含定级赛' : ''})
-              </label>
-              <input
-                id="input-N"
-                type="number"
-                min="1"
-                value={rawInputs.N}
-                onChange={(e) => handleInputChange('N', e.target.value)}
+            {/* 右侧：上赛季继承分规则参考表 (字小一点，紧凑精致) */}
+            <div
+              style={{
+                flex: '0 1 240px',
+                minWidth: '220px',
+                backgroundColor: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                padding: '8px 10px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+              }}
+            >
+              <div
                 style={{
-                  backgroundColor: '#1e293b',
-                  color: '#ffffff',
-                  border: '1px solid #38bdf8',
-                  borderRadius: '4px',
-                  padding: '6px 10px',
-                  width: '120px',
-                  textAlign: 'right',
-                  fontSize: '14px',
                   fontWeight: 'bold',
+                  fontSize: '11px',
+                  color: '#38bdf8',
+                  marginBottom: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderBottom: '1px solid #334155',
+                  paddingBottom: '4px',
                 }}
-              />
-            </div>
-
-            {/* 4. P_bar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="input-P_bar" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                4. 面板胜率 (<span style={{ textDecoration: 'overline', textDecorationThickness: '1.5px', textUnderlineOffset: '2px' }}>P(s)</span>)
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <input
-                  id="input-P_bar"
-                  type="text"
-                  value={rawInputs.P_bar}
-                  onChange={(e) => handleInputChange('P_bar', e.target.value)}
-                  style={{
-                    backgroundColor: '#1e293b',
-                    color: '#ffffff',
-                    border: '1px solid #38bdf8',
-                    borderRadius: '4px',
-                    padding: '6px 10px',
-                    width: '100px',
-                    textAlign: 'right',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                  }}
-                />
-                <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>%</span>
+              >
+                <span>上赛季分数继承规则</span>
+                <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 'normal' }}>点按快捷填入</span>
               </div>
-            </div>
-
-            {/* 5. PS (五连绝世) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <label htmlFor="input-P_5" style={{ fontWeight: '500', color: '#e2e8f0', display: 'block' }}>
-                  5. 五连绝世数 (PS)
-                </label>
-                <span style={{ fontSize: '11px', color: '#94a3b8' }}>提示：去除定级赛的数量</span>
-              </div>
-              <input
-                id="input-P_5"
-                type="number"
-                min="0"
-                value={rawInputs.P_5}
-                onChange={(e) => handleInputChange('P_5', e.target.value)}
-                style={{
-                  backgroundColor: '#1e293b',
-                  color: '#ffffff',
-                  border: '1px solid #38bdf8',
-                  borderRadius: '4px',
-                  padding: '6px 10px',
-                  width: '120px',
-                  textAlign: 'right',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                }}
-              />
-            </div>
-
-            {/* 6. G (顶级牌+金牌) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <label htmlFor="input-G" style={{ fontWeight: '500', color: '#e2e8f0', display: 'block' }}>
-                  6. 顶级牌 + 金牌数 (G)
-                </label>
-                <span style={{ fontSize: '11px', color: '#94a3b8' }}>提示：去除定级赛的数量</span>
-              </div>
-              <input
-                id="input-G"
-                type="number"
-                min="0"
-                value={rawInputs.G}
-                onChange={(e) => handleInputChange('G', e.target.value)}
-                style={{
-                  backgroundColor: '#1e293b',
-                  color: '#ffffff',
-                  border: '1px solid #38bdf8',
-                  borderRadius: '4px',
-                  padding: '6px 10px',
-                  width: '120px',
-                  textAlign: 'right',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                }}
-              />
-            </div>
-
-            {/* 7. SV (银牌) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <label htmlFor="input-S_v" style={{ fontWeight: '500', color: '#e2e8f0', display: 'block' }}>
-                  7. 银牌数 (SV)
-                </label>
-                <span style={{ fontSize: '11px', color: '#94a3b8' }}>提示：去除定级赛的数量</span>
-              </div>
-              <input
-                id="input-S_v"
-                type="number"
-                min="0"
-                value={rawInputs.S_v}
-                onChange={(e) => handleInputChange('S_v', e.target.value)}
-                style={{
-                  backgroundColor: '#1e293b',
-                  color: '#ffffff',
-                  border: '1px solid #38bdf8',
-                  borderRadius: '4px',
-                  padding: '6px 10px',
-                  width: '120px',
-                  textAlign: 'right',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                }}
-              />
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', lineHeight: '1.4' }}>
+                <thead>
+                  <tr style={{ color: '#94a3b8', borderBottom: '1px solid #334155' }}>
+                    <th style={{ padding: '2px 4px', textAlign: 'left', fontWeight: '500' }}>上赛季结算分</th>
+                    <th style={{ padding: '2px 4px', textAlign: 'right', fontWeight: '500' }}>继承分</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { range: '≥ 2400 分', score: 1450 },
+                    { range: '2200 ～ 2399 分', score: 1425 },
+                    { range: '2000 ～ 2199 分', score: 1400 },
+                    { range: '1800 ～ 1999 分', score: 1350 },
+                    { range: '1600 ～ 1799 分', score: 1300 },
+                    { range: '1400 ～ 1599 分', score: 1250 },
+                    { range: '1200 ～ 1399 分', score: 1200 },
+                    { range: '＜ 1200 分', score: 1200 },
+                  ].map((row, idx, arr) => (
+                    <tr
+                      key={idx}
+                      onClick={() => {
+                        handleInputChange('S_placement', String(row.score));
+                        handleInputChange('baselineType', 'inherited');
+                      }}
+                      style={{
+                        borderBottom: idx === arr.length - 1 ? 'none' : '1px solid #1e293b',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.15s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#334155')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      title={`点击快捷填入继承分 ${row.score}`}
+                    >
+                      <td style={{ padding: '2px 4px', color: '#e2e8f0', whiteSpace: 'nowrap' }}>{row.range}</td>
+                      <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 'bold', color: '#2dd4bf', whiteSpace: 'nowrap' }}>
+                        {row.score} 分
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
