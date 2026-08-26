@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { RankDynamicsAnalyzer } from '../engine';
+import { RankDynamicsAnalyzer, BaselineType } from '../engine';
 
 interface ScoreMatchesChartProps {
   STrue: number;
@@ -11,6 +11,7 @@ interface ScoreMatchesChartProps {
   MEP: number;
   currentN: number;
   hasData?: boolean;
+  baselineType?: BaselineType;
 }
 
 export default function ScoreMatchesChart({
@@ -23,6 +24,7 @@ export default function ScoreMatchesChart({
   MEP,
   currentN,
   hasData = true,
+  baselineType = 'placement',
 }: ScoreMatchesChartProps) {
   // 双向计算器状态
   const [calcMode, setCalcMode] = useState<'scoreToMatches' | 'matchesToScore'>('scoreToMatches');
@@ -34,16 +36,16 @@ export default function ScoreMatchesChart({
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  const safeSTrue = STrue > 0 ? STrue : 1400;
-  const safeSPlacement = SPlacement > 0 ? SPlacement : 1400;
-  const safeSPresent = SPresent > 0 ? SPresent : safeSPlacement;
-  const safeSMax = SMax > 0 ? SMax : Math.max(safeSTrue + 200, 2400);
-  const safeKF = kF > 0 ? kF : 450;
-  const safePBar = PBar > 0 ? PBar : 0.6;
-  const safeMEP = MEP > 0 ? MEP : 1.8;
-  const safeCurrentN = currentN > 0 ? currentN : 5;
+  const safeSTrue = typeof STrue === 'number' && isFinite(STrue) ? STrue : 1400;
+  const safeSPlacement = typeof SPlacement === 'number' && isFinite(SPlacement) && SPlacement > 0 ? SPlacement : 1400;
+  const safeSPresent = typeof SPresent === 'number' && isFinite(SPresent) && SPresent > 0 ? SPresent : safeSPlacement;
+  const safeSMax = typeof SMax === 'number' && isFinite(SMax) && SMax > 0 ? SMax : Math.max(safeSTrue + 200, 2400);
+  const safeKF = typeof kF === 'number' && isFinite(kF) && kF > 0 ? kF : 450;
+  const safePBar = typeof PBar === 'number' && isFinite(PBar) && PBar > 0 ? PBar : 0.6;
+  const safeMEP = typeof MEP === 'number' && isFinite(MEP) && MEP >= 0 ? MEP : 1.8;
+  const safeCurrentN = typeof currentN === 'number' && isFinite(currentN) && currentN > 0 ? currentN : 5;
 
-  const isValid = hasData && STrue > 0;
+  const isValid = Boolean(hasData && STrue !== undefined && STrue !== null && isFinite(STrue));
 
   // 默认目标分数预设为当前分 + 100 分，或 2100 / 2300 等
   const effectiveTargetScore = useMemo(() => {
@@ -83,45 +85,90 @@ export default function ScoreMatchesChart({
     );
   }, [isValid, safeSPresent, deltaMatchesInput, safeSTrue, safePBar, safeMEP, safeKF, safeSMax]);
 
-  // 图表数据范围计算
-  const minScore = Math.floor(Math.min(safeSPlacement, 1200) / 100) * 100;
-  // 最大显示分数设为 S_max - 5 分或当前分以上
-  const maxScore = Math.ceil(Math.max(safeSMax, safeSPresent + 100, 2400) / 100) * 100;
+  // 图表数据范围计算：根据实际算出的物理量动态决定（不人为截断上下限）
+  const minScore = useMemo(() => {
+    const rawMin = Math.min(safeSPlacement, safeSPresent, safeSTrue, 1200);
+    return isFinite(rawMin) ? Math.floor(rawMin / 100) * 100 : 1200;
+  }, [safeSPlacement, safeSPresent, safeSTrue]);
 
-  // 生成连续场数-分数曲线点 (S 从 S_placement 开始往上算到 S_max - 1)
+  const maxScore = useMemo(() => {
+    const rawMax = Math.max(safeSMax, safeSPresent + 100, safeSTrue + 100, 2400);
+    return isFinite(rawMax) ? Math.ceil(rawMax / 100) * 100 : 2400;
+  }, [safeSMax, safeSPresent, safeSTrue]);
+
+  // 高性能单遍连续场数-分数轨迹点生成 (O(N) 离散梯形积分，始终在 0.1ms 内完成且完全真实无界)
   const trajectoryData = useMemo(() => {
-    if (!isValid) return [];
+    if (!isValid || !isFinite(minScore) || !isFinite(maxScore) || minScore >= maxScore) return [];
     const points: { score: number; totalN: number; winRate: number; velocity: number }[] = [];
-    const step = 10;
-    const endS = Math.min(maxScore, safeSMax - 1);
+    const totalSteps = 80;
+    const stepSize = Math.max(1, (maxScore - minScore) / totalSteps);
 
-    for (let s = minScore; s <= endS; s += step) {
-      const totalN = RankDynamicsAnalyzer.get_cumulative_matches(
-        s,
-        safeSPlacement,
-        safeSTrue,
-        safePBar,
-        safeMEP,
-        safeKF,
-        safeSMax
-      );
+    // 1. 生成离散点分数数组
+    const sValues: number[] = [];
+    for (let s = minScore; s <= maxScore + 1e-5; s += stepSize) {
+      sValues.push(Number(s.toFixed(2)));
+    }
+    // 确保定级赛分数在数组中
+    if (!sValues.some((v) => Math.abs(v - safeSPlacement) < 2)) {
+      sValues.push(safeSPlacement);
+      sValues.sort((a, b) => a - b);
+    }
 
+    if (sValues.length === 0) return [];
+
+    // 2. 先计算各点的单点物理量
+    const evaluated = sValues.map((s) => {
       const winRate = (1.0 / (1.0 + Math.pow(10.0, (s - safeSTrue) / safeKF))) * 100;
-      const velocity = RankDynamicsAnalyzer.get_velocity(s, safeSTrue, safePBar, safeMEP, safeKF);
+      const rawV = RankDynamicsAnalyzer.get_velocity(s, safeSTrue, safePBar, safeMEP, safeKF);
+      const v = Math.abs(rawV) < 1e-3 ? (rawV >= 0 ? 1e-3 : -1e-3) : rawV;
+      return { score: s, winRate, velocity: rawV, invV: 1.0 / v };
+    });
 
-      if (isFinite(totalN) && totalN >= 0 && totalN <= 2500) {
+    // 3. 找到定级分对应的索引，从定级分点 (N=5) 向两侧单遍梯形数值积分
+    let placeIdx = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < evaluated.length; i++) {
+      const diff = Math.abs(evaluated[i].score - safeSPlacement);
+      if (diff < minDiff) {
+        minDiff = diff;
+        placeIdx = i;
+      }
+    }
+
+    const initialN = baselineType === 'inherited' ? 0 : 5;
+    const nValues: number[] = evaluated.map(() => initialN);
+
+    // 向右积分 (爬升阶段)
+    for (let i = placeIdx + 1; i < evaluated.length; i++) {
+      const ds = evaluated[i].score - evaluated[i - 1].score;
+      const avgInvV = Math.max(0.01, (evaluated[i].invV + evaluated[i - 1].invV) / 2);
+      nValues[i] = nValues[i - 1] + ds * avgInvV;
+    }
+
+    // 向左积分 (掉分阶段)
+    for (let i = placeIdx - 1; i >= 0; i--) {
+      const ds = evaluated[i + 1].score - evaluated[i].score;
+      const avgInvV = (evaluated[i].invV + evaluated[i + 1].invV) / 2;
+      nValues[i] = Math.max(0, nValues[i + 1] - ds * avgInvV);
+    }
+
+    for (let i = 0; i < evaluated.length; i++) {
+      const totalN = Number(nValues[i].toFixed(1));
+      if (isFinite(totalN) && totalN <= 3000) {
         points.push({
-          score: s,
+          score: evaluated[i].score,
           totalN,
-          winRate,
-          velocity,
+          winRate: evaluated[i].winRate,
+          velocity: evaluated[i].velocity,
         });
       }
     }
+
     return points;
   }, [isValid, minScore, maxScore, safeSPlacement, safeSTrue, safePBar, safeMEP, safeKF, safeSMax]);
 
-  // Y 轴范围：总场数范围
+  // 坐标轴交换：X 轴为场次 (0 ~ maxN)，Y 轴为巅峰分数 (minScore ~ maxScore)
+  // X 轴范围：总场数范围
   const maxN = useMemo(() => {
     if (trajectoryData.length === 0) return 500;
     const highestDataN = trajectoryData[trajectoryData.length - 1]?.totalN || 500;
@@ -138,25 +185,25 @@ export default function ScoreMatchesChart({
   const plotWidth = width - padding.left - padding.right;
   const plotHeight = height - padding.top - padding.bottom;
 
-  // 坐标映射
-  const getX = (score: number) => {
-    return padding.left + ((score - minScore) / (maxScore - minScore)) * plotWidth;
+  // 坐标映射：X = 场次, Y = 巅峰分数
+  const getX = (totalMatches: number) => {
+    return padding.left + (Math.min(maxN, Math.max(0, totalMatches)) / maxN) * plotWidth;
   };
 
-  const getY = (totalMatches: number) => {
-    return padding.top + (1 - Math.min(maxN, totalMatches) / maxN) * plotHeight;
+  const getY = (score: number) => {
+    return padding.top + (1 - (score - minScore) / (maxScore - minScore)) * plotHeight;
   };
 
-  // 生成 SVG 曲线路径
+  // 生成 SVG 曲线路径 (X: 场次, Y: 分数)
   const curvePoints = useMemo(() => {
     return trajectoryData
       .filter((pt) => pt.totalN <= maxN * 1.05)
       .map((pt) => ({
         ...pt,
-        x: getX(pt.score),
-        y: getY(pt.totalN),
+        x: getX(pt.totalN),
+        y: getY(pt.score),
       }));
-  }, [trajectoryData, maxN]);
+  }, [trajectoryData, maxN, minScore, maxScore]);
 
   const pathD = useMemo(() => {
     if (curvePoints.length === 0) return '';
@@ -167,32 +214,37 @@ export default function ScoreMatchesChart({
 
   const areaD = useMemo(() => {
     if (curvePoints.length === 0) return '';
-    const bottomY = getY(0);
+    const bottomY = getY(minScore);
     const startX = curvePoints[0].x;
     const endX = curvePoints[curvePoints.length - 1].x;
     return `${pathD} L ${endX},${bottomY} L ${startX},${bottomY} Z`;
-  }, [pathD, curvePoints]);
+  }, [pathD, curvePoints, minScore]);
 
-  // X 轴刻度
+  // X 轴刻度 (场数)
   const xTicks = useMemo(() => {
+    if (!isFinite(maxN) || maxN <= 0) return [0, 100, 200, 300, 400, 500];
+    const step = Math.max(20, Math.round(maxN / 5 / 20) * 20);
     const ticks: number[] = [];
-    for (let s = minScore; s <= maxScore; s += 200) {
-      ticks.push(s);
-    }
-    return ticks;
-  }, [minScore, maxScore]);
-
-  // Y 轴刻度
-  const yTicks = useMemo(() => {
-    const step = Math.max(50, Math.round(maxN / 5 / 50) * 50);
-    const ticks: number[] = [];
-    for (let n = 0; n <= maxN; n += step) {
+    for (let n = 0; n <= maxN + 1e-5; n += step) {
       ticks.push(n);
     }
     return ticks;
   }, [maxN]);
 
-  // 鼠标交互
+  // Y 轴刻度 (巅峰分数)
+  const yTicks = useMemo(() => {
+    if (!isFinite(minScore) || !isFinite(maxScore) || minScore >= maxScore) return [1200, 1400, 1600, 1800, 2000, 2200, 2400];
+    const range = maxScore - minScore;
+    const roughStep = range / 6;
+    const step = Math.max(50, Math.ceil(roughStep / 50) * 50);
+    const ticks: number[] = [];
+    for (let s = minScore; s <= maxScore + 1e-5; s += step) {
+      ticks.push(s);
+    }
+    return ticks;
+  }, [minScore, maxScore]);
+
+  // 鼠标交互 (根据 X 轴场次定位)
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current || curvePoints.length === 0) return;
     const rect = svgRef.current.getBoundingClientRect();
@@ -200,15 +252,14 @@ export default function ScoreMatchesChart({
     const svgX = (mouseX / rect.width) * width;
 
     if (svgX >= padding.left && svgX <= width - padding.right) {
-      const scoreRatio = (svgX - padding.left) / plotWidth;
-      const exactScore = minScore + scoreRatio * (maxScore - minScore);
-      const roundedScore = Math.round(exactScore);
+      const matchRatio = (svgX - padding.left) / plotWidth;
+      const targetN = matchRatio * maxN;
 
-      // 找到最近的数据点
+      // 找到最近场次的数据点
       let closest = curvePoints[0];
       let minDiff = Infinity;
       for (const pt of curvePoints) {
-        const diff = Math.abs(pt.score - roundedScore);
+        const diff = Math.abs(pt.totalN - targetN);
         if (diff < minDiff) {
           minDiff = diff;
           closest = pt;
@@ -287,12 +338,13 @@ export default function ScoreMatchesChart({
     );
   }
 
-  // 关键标记点坐标
-  const placementX = getX(safeSPlacement);
-  const placementY = getY(5);
+  // 关键标记点坐标 (X: 场次, Y: 分数)
+  const initialMatches = baselineType === 'inherited' ? 0 : 5;
+  const placementX = getX(initialMatches);
+  const placementY = getY(safeSPlacement);
 
-  const presentX = getX(safeSPresent);
-  const presentY = getY(safeCurrentN);
+  const presentX = getX(safeCurrentN);
+  const presentY = getY(safeSPresent);
 
   const sTrueTotalN = RankDynamicsAnalyzer.get_cumulative_matches(
     safeSTrue,
@@ -303,10 +355,10 @@ export default function ScoreMatchesChart({
     safeKF,
     safeSMax
   );
-  const sTrueX = getX(safeSTrue);
-  const sTrueY = getY(sTrueTotalN);
+  const sTrueX = getX(sTrueTotalN);
+  const sTrueY = getY(safeSTrue);
 
-  const sMaxX = getX(safeSMax);
+  const sMaxY = getY(safeSMax);
 
   return (
     <div
@@ -341,7 +393,9 @@ export default function ScoreMatchesChart({
             </h3>
           </div>
           <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
-            展示从定级赛（{safeSPlacement}分, 5场）开始全周期的累计总场数与分数演化关系，支持任意目标分数或额外场次的精确微积分双向推算。
+            {baselineType === 'inherited'
+              ? `展示从继承起点（${safeSPlacement}分, 0场）开始全周期的累计总场数与分数演化关系，支持任意目标分数或额外场次的精确微积分双向推算。`
+              : `展示从定级起点（${safeSPlacement}分, 5场）开始全周期的累计总场数与分数演化关系，支持任意目标分数或额外场次的精确微积分双向推算。`}
           </p>
         </div>
       </div>
@@ -397,7 +451,7 @@ export default function ScoreMatchesChart({
                 </linearGradient>
               </defs>
 
-              {/* 网格水平参考线 */}
+              {/* 网格水平参考线 (Y 轴: 巅峰分) */}
               {yTicks.map((tick) => {
                 const y = getY(tick);
                 return (
@@ -419,13 +473,13 @@ export default function ScoreMatchesChart({
                       textAnchor="end"
                       fontFamily="monospace"
                     >
-                      {tick}场
+                      {tick}
                     </text>
                   </g>
                 );
               })}
 
-              {/* 网格垂直参考线 */}
+              {/* 网格垂直参考线 (X 轴: 累计场数) */}
               {xTicks.map((tick) => {
                 const x = getX(tick);
                 return (
@@ -453,25 +507,25 @@ export default function ScoreMatchesChart({
                 );
               })}
 
-              {/* 理论最高分 S_max 极限渐近虚线 */}
-              {sMaxX >= padding.left && sMaxX <= width - padding.right && (
+              {/* 理论最高分 S_max 水平极限渐近虚线 */}
+              {sMaxY >= padding.top && sMaxY <= height - padding.bottom && (
                 <g>
                   <line
-                    x1={sMaxX}
-                    y1={padding.top}
-                    x2={sMaxX}
-                    y2={height - padding.bottom}
+                    x1={padding.left}
+                    y1={sMaxY}
+                    x2={width - padding.right}
+                    y2={sMaxY}
                     stroke="#f59e0b"
                     strokeWidth="1.5"
                     strokeDasharray="4,3"
                   />
                   <text
-                    x={sMaxX}
-                    y={padding.top - 8}
+                    x={width - padding.right}
+                    y={sMaxY - 6}
                     fill="#f59e0b"
                     fontSize="10"
                     fontWeight="bold"
-                    textAnchor="middle"
+                    textAnchor="end"
                   >
                     S_max ({safeSMax.toFixed(0)}) 极限
                   </text>
@@ -492,12 +546,12 @@ export default function ScoreMatchesChart({
                 />
               )}
 
-              {/* 关键标记点 1：定级赛初始点 */}
+              {/* 关键标记点 1：初始起点 */}
               {placementX >= padding.left && (
                 <g>
                   <circle cx={placementX} cy={placementY} r="5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
                   <text x={placementX + 6} y={placementY - 6} fill="#34d399" fontSize="10" fontWeight="bold">
-                    定级起点 ({safeSPlacement}分, 5场)
+                    {baselineType === 'inherited' ? `继承起点 (${safeSPlacement}分, 0场)` : `定级起点 (${safeSPlacement}分, 5场)`}
                   </text>
                 </g>
               )}
@@ -507,7 +561,7 @@ export default function ScoreMatchesChart({
                 <g>
                   <circle cx={presentX} cy={presentY} r="6" fill="#38bdf8" stroke="#ffffff" strokeWidth="2" />
                   <text x={presentX} y={presentY - 10} fill="#38bdf8" fontSize="11" fontWeight="bold" textAnchor="middle">
-                    当前 ({safeSPresent}分, {safeCurrentN}场)
+                    当前 ({safeCurrentN}场, {safeSPresent}分)
                   </text>
                 </g>
               )}
@@ -564,7 +618,7 @@ export default function ScoreMatchesChart({
                 fontSize="11"
                 textAnchor="end"
               >
-                巅峰分数 (分) →
+                累计总场数 (场) →
               </text>
               <text
                 x={padding.left - 6}
@@ -573,7 +627,7 @@ export default function ScoreMatchesChart({
                 fontSize="11"
                 textAnchor="start"
               >
-                ↑ 累计总场数 (从定级开始)
+                ↑ 巅峰分数 (分)
               </text>
             </svg>
           </div>

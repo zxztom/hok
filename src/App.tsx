@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { solveDynamics, PlayerStats, CalculationResult, RankDynamicsAnalyzer } from './engine';
+import { solveDynamics, PlayerStats, CalculationResult, RankDynamicsAnalyzer, BaselineType } from './engine';
 import AlgorithmManual from './components/AlgorithmManual';
 import WinRateChart from './components/WinRateChart';
 import ScoreMatchesChart from './components/ScoreMatchesChart';
@@ -14,7 +14,7 @@ interface ExampleProfile {
   desc?: string;
 }
 
-// 精选实战纯客观战绩示例（定级赛分数均按1400分计算）
+// 精选实战纯客观战绩示例（起始基准按继承分1475计算）
 const EXAMPLES: ExampleProfile[] = [
   {
     id: 'ex-1',
@@ -26,12 +26,13 @@ const EXAMPLES: ExampleProfile[] = [
       N: 237,
       P_bar: 0.620,
       S_final: 2410.0,
-      S_placement: 1400.0,
+      S_placement: 1475.0,
+      baselineType: 'inherited',
       G: 35,
       S_v: 25,
       P_5: 0,
     },
-    desc: '重庆狼队·紫幻（定级1400分，237场 62.0% 2410分，金35 / 银25 / 五杀0）',
+    desc: '重庆狼队·紫幻（继承1475分，237场 62.0% 2410分，金35 / 银25 / 五杀0）',
   },
   {
     id: 'ex-zongshi',
@@ -43,12 +44,13 @@ const EXAMPLES: ExampleProfile[] = [
       N: 111,
       P_bar: 0.838,
       S_final: 2503.0,
-      S_placement: 1400.0,
+      S_placement: 1475.0,
+      baselineType: 'inherited',
       G: 41, // 顶级7 + 金34 = 41
       S_v: 24,
       P_5: 0,
     },
-    desc: '宗师 2503分（定级1400分，111场 83.8% 超高胜率通天野王，顶级7 / 金34 / 银24）',
+    desc: '宗师 2503分（继承1475分，111场 83.8% 超高胜率通天野王，顶级7 / 金34 / 银24）',
   },
   {
     id: 'ex-qingyan',
@@ -60,12 +62,13 @@ const EXAMPLES: ExampleProfile[] = [
       N: 143,
       P_bar: 0.671,
       S_final: 2248.0,
-      S_placement: 1400.0,
+      S_placement: 1475.0,
+      baselineType: 'inherited',
       G: 31, // 顶级3 + 金28 = 31
       S_v: 25,
       P_5: 0,
     },
-    desc: 'KSG青炎 2248分（定级1400分，143场 67.1%，顶级3 / 金28 / 银25）',
+    desc: 'KSG青炎 2248分（继承1475分，143场 67.1%，顶级3 / 金28 / 银25）',
   },
   {
     id: 'ex-xiaomai',
@@ -77,12 +80,13 @@ const EXAMPLES: ExampleProfile[] = [
       N: 176,
       P_bar: 0.659,
       S_final: 2413.0,
-      S_placement: 1400.0,
+      S_placement: 1475.0,
+      baselineType: 'inherited',
       G: 46, // 顶级4 + 金42 = 46
       S_v: 36,
       P_5: 1, // 五杀1
     },
-    desc: '小麦 2413分（定级1400分，176场 65.9%，顶级4 / 金42 / 银36 / 五杀1）',
+    desc: '小麦 2413分（继承1475分，176场 65.9%，顶级4 / 金42 / 银36 / 五杀1）',
   },
   {
     id: 'ex-jiushu',
@@ -94,12 +98,13 @@ const EXAMPLES: ExampleProfile[] = [
       N: 261,
       P_bar: 0.613,
       S_final: 2304.0,
-      S_placement: 1400.0,
+      S_placement: 1475.0,
+      baselineType: 'inherited',
       G: 35, // 顶级4 + 金31 = 35
       S_v: 31,
       P_5: 0,
     },
-    desc: '救赎 2304分（定级1400分，261场 61.3% 职业辅助，顶级4 / 金31 / 银31）',
+    desc: '救赎 2304分（继承1475分，261场 61.3% 职业辅助，顶级4 / 金31 / 银31）',
   },
   {
     id: 'ex-yinuo',
@@ -111,12 +116,13 @@ const EXAMPLES: ExampleProfile[] = [
       N: 226,
       P_bar: 0.606,
       S_final: 2277.0,
-      S_placement: 1400.0,
+      S_placement: 1475.0,
+      baselineType: 'inherited',
       G: 50, // 顶级3 + 金47 = 50
       S_v: 37,
       P_5: 1, // 五杀1
     },
-    desc: '一诺 2277分（定级1400分，226场 60.6% 顶级射手大核，顶级3 / 金47 / 银37 / 五杀1）',
+    desc: '一诺 2277分（继承1475分，226场 60.6% 顶级射手大核，顶级3 / 金47 / 银37 / 五杀1）',
   },
   {
     id: 'ex-daozai',
@@ -128,18 +134,20 @@ const EXAMPLES: ExampleProfile[] = [
       N: 560,
       P_bar: 0.559,
       S_final: 2230.0,
-      S_placement: 1400.0,
+      S_placement: 1475.0,
+      baselineType: 'inherited',
       G: 62, // 顶级3 + 金59 = 62
       S_v: 52,
       P_5: 1, // 五杀1
     },
-    desc: '道崽 2230分（定级1400分，560场 55.9% 高场次战神，顶级3 / 金59 / 银52 / 五杀1）',
+    desc: '道崽 2230分（继承1475分，560场 55.9% 高场次战神，顶级3 / 金59 / 银52 / 五杀1）',
   },
 ];
 
 interface RawFormInputs {
   S_final: string;
   S_placement: string;
+  baselineType: BaselineType;
   N: string;
   P_bar: string;
   P_5: string;
@@ -148,10 +156,11 @@ interface RawFormInputs {
 }
 
 export default function App() {
-  // 进入时的输入框状态（定级赛默认1400，其余待输入）
+  // 进入时的输入框状态（全部留空，等待用户输入；示例中保留1400）
   const [rawInputs, setRawInputs] = useState<RawFormInputs>({
     S_final: '',
-    S_placement: '1400',
+    S_placement: '',
+    baselineType: 'placement',
     N: '',
     P_bar: '',
     P_5: '',
@@ -171,7 +180,8 @@ export default function App() {
   const loadExample = (ex: ExampleProfile) => {
     setRawInputs({
       S_final: String(ex.stats.S_final),
-      S_placement: String(ex.stats.S_placement || 1400),
+      S_placement: String(ex.stats.S_placement ?? 1475),
+      baselineType: ex.stats.baselineType || 'inherited',
       N: String(ex.stats.N),
       P_bar: ex.rawPBar,
       P_5: String(ex.stats.P_5),
@@ -186,6 +196,7 @@ export default function App() {
     setRawInputs({
       S_final: '',
       S_placement: '',
+      baselineType: 'placement',
       N: '',
       P_bar: '',
       P_5: '',
@@ -198,7 +209,7 @@ export default function App() {
   // 解析输入并检验是否就绪
   const parsedInputs: PlayerStats = useMemo(() => {
     const S_final = parseFloat(rawInputs.S_final) || 0;
-    const S_placement = parseFloat(rawInputs.S_placement) || 1400;
+    const S_placement = parseFloat(rawInputs.S_placement) || 0;
     const N = parseInt(rawInputs.N, 10) || 0;
     const pNum = parseFloat(rawInputs.P_bar) || 0;
     const P_bar = pNum > 1 ? pNum / 100 : pNum;
@@ -209,6 +220,7 @@ export default function App() {
     return {
       S_final,
       S_placement,
+      baselineType: rawInputs.baselineType,
       N,
       P_bar,
       P_5,
@@ -219,9 +231,10 @@ export default function App() {
 
   const isReady = useMemo(() => {
     const s = parseFloat(rawInputs.S_final);
+    const sInit = parseFloat(rawInputs.S_placement);
     const n = parseInt(rawInputs.N, 10);
     const p = parseFloat(rawInputs.P_bar);
-    return !isNaN(s) && s > 0 && !isNaN(n) && n > 0 && !isNaN(p) && p > 0;
+    return !isNaN(s) && s > 0 && !isNaN(sInit) && sInit > 0 && !isNaN(n) && n > 0 && !isNaN(p) && p > 0;
   }, [rawInputs]);
 
   const result: CalculationResult | null = useMemo(() => {
@@ -322,7 +335,9 @@ export default function App() {
           <div>
             <strong style={{ color: '#38bdf8' }}>提示：</strong>
             <span>
-              定级赛（5场）打完后的初始分数即为定级赛分数（默认1400），算法以此为积分起点，积分阶段按 (N - 5) 场计算。挑战赛会使分数预测偏高。
+              {rawInputs.baselineType === 'placement'
+                ? '已选【定级赛分数】：以定级赛分数（如1400）为积分起点，按 (N - 5) 场有效场次积分。'
+                : '已选【继承分数】：以赛季继承分数（如1475）为积分起点，按全量 N 场积分。'}
             </span>
           </div>
         </div>
@@ -709,16 +724,34 @@ export default function App() {
               />
             </div>
 
-            {/* 2. S_placement (定级赛分数) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="input-S_placement" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                2. 定级赛分数 (S_init)
-              </label>
+            {/* 2. 定级赛分数 / 继承分数 (可选切换) */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontWeight: '500', color: '#e2e8f0' }}>2. 起始基准</span>
+                <select
+                  id="select-baseline-type"
+                  value={rawInputs.baselineType}
+                  onChange={(e) => handleInputChange('baselineType', e.target.value)}
+                  style={{
+                    backgroundColor: '#1e293b',
+                    color: '#38bdf8',
+                    border: '1px solid #0284c7',
+                    borderRadius: '4px',
+                    padding: '2px 6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="placement">定级赛分数</option>
+                  <option value="inherited">继承分数</option>
+                </select>
+              </div>
               <input
                 id="input-S_placement"
                 type="number"
                 step="1"
-                placeholder="默认1400"
+                placeholder=""
                 value={rawInputs.S_placement}
                 onChange={(e) => handleInputChange('S_placement', e.target.value)}
                 style={{
@@ -738,7 +771,7 @@ export default function App() {
             {/* 3. N */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-N" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                3. 总场次 (N, 含定级赛)
+                3. 总场次 (N{rawInputs.baselineType === 'placement' ? ', 含定级赛' : ''})
               </label>
               <input
                 id="input-N"
@@ -789,9 +822,12 @@ export default function App() {
 
             {/* 5. PS (五连绝世) */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="input-P_5" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                5. 五连绝世数 (PS)
-              </label>
+              <div>
+                <label htmlFor="input-P_5" style={{ fontWeight: '500', color: '#e2e8f0', display: 'block' }}>
+                  5. 五连绝世数 (PS)
+                </label>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>提示：去除定级赛的数量</span>
+              </div>
               <input
                 id="input-P_5"
                 type="number"
@@ -814,9 +850,12 @@ export default function App() {
 
             {/* 6. G (顶级牌+金牌) */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="input-G" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                6. 顶级牌 + 金牌数 (G)
-              </label>
+              <div>
+                <label htmlFor="input-G" style={{ fontWeight: '500', color: '#e2e8f0', display: 'block' }}>
+                  6. 顶级牌 + 金牌数 (G)
+                </label>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>提示：去除定级赛的数量</span>
+              </div>
               <input
                 id="input-G"
                 type="number"
@@ -839,9 +878,12 @@ export default function App() {
 
             {/* 7. SV (银牌) */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="input-S_v" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                7. 银牌数 (SV)
-              </label>
+              <div>
+                <label htmlFor="input-S_v" style={{ fontWeight: '500', color: '#e2e8f0', display: 'block' }}>
+                  7. 银牌数 (SV)
+                </label>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>提示：去除定级赛的数量</span>
+              </div>
               <input
                 id="input-S_v"
                 type="number"
@@ -875,6 +917,7 @@ export default function App() {
           PBar={baseParams.P_bar}
           MEP={baseParams.M_EP}
           currentN={parsedInputs.N}
+          baselineType={parsedInputs.baselineType}
         />
 
         {/* 各巅峰分段单局胜率预测看板 (交互式图表 + 数据明细) */}

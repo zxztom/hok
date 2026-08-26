@@ -26,9 +26,9 @@ export default function WinRateChart({
   const safeKF = kF > 0 ? kF : 450;
   const isValid = hasData && STrue > 0;
 
-  // 计算图表 X 轴范围
-  const minScore = 1200;
-  const maxScore = Math.max(2600, Math.ceil(Math.max(SPresent || 0, SMax || 0, safeSTrue + 200) / 100) * 100 + 100);
+  // 计算图表 X 轴范围：动态适配（不人为锁死在 3000）
+  const minScore = Math.floor(Math.min(1200, safeSTrue - 200, SPresent || 1200) / 100) * 100;
+  const maxScore = Math.ceil(Math.max(2400, safeSTrue + 300, SPresent || 0, SMax || 0) / 100) * 100;
 
   // SVG 视图尺寸
   const width = 760;
@@ -51,11 +51,12 @@ export default function WinRateChart({
     return (1.0 / (1.0 + Math.pow(10.0, (score - safeSTrue) / safeKF))) * 100;
   };
 
-  // 生成平滑曲线点
+  // 生成平滑曲线点（固定 80 步长采样，永远不会死循环）
   const curvePoints = useMemo(() => {
     if (!isValid) return [];
     const points: { x: number; y: number; score: number; rate: number }[] = [];
-    const step = 10;
+    const totalSteps = 80;
+    const step = Math.max(1, (maxScore - minScore) / totalSteps);
     for (let s = minScore; s <= maxScore; s += step) {
       const rate = (1.0 / (1.0 + Math.pow(10.0, (s - safeSTrue) / safeKF))) * 100;
       points.push({
@@ -87,12 +88,16 @@ export default function WinRateChart({
 
   // X 轴刻度
   const xTicks = useMemo(() => {
+    if (!isFinite(minScore) || !isFinite(maxScore) || minScore >= maxScore) return [1200, 1400, 1600, 1800, 2000, 2200, 2400];
+    const range = maxScore - minScore;
+    const roughStep = range / 6;
+    const step = Math.max(50, Math.ceil(roughStep / 50) * 50);
     const ticks: number[] = [];
-    for (let s = 1200; s <= maxScore; s += 200) {
+    for (let s = minScore; s <= maxScore + 1e-5; s += step) {
       ticks.push(s);
     }
     return ticks;
-  }, [maxScore]);
+  }, [minScore, maxScore]);
 
   if (!isValid) {
     return (

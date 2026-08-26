@@ -9,6 +9,8 @@
  * 5. 内置物理超光速熔断安全机制
  */
 
+export type BaselineType = 'placement' | 'inherited';
+
 export interface PlayerStats {
   N: number;           // 总场次 (N)
   P_bar: number;       // 面板总胜率 (0.001 ~ 0.999 或 0 ~ 100)
@@ -16,7 +18,8 @@ export interface PlayerStats {
   P_5: number;         // 五连绝世数 (PS)
   G: number;           // 顶级牌 + 金牌数 (G)
   S_v: number;         // 银牌数 (SV)
-  S_placement?: number;// 定级赛分数 (S_placement / S_0)，默认 1400
+  S_placement?: number;// 起始基准分数 (S_init)，兼容定级赛分数或继承分数
+  baselineType?: BaselineType; // 'placement' (定级赛分数，扣除5场) | 'inherited' (继承分数，不扣5场)
   mvp_count?: number;  // 兼容字段
   gamma_role?: number; // 兼容字段
 }
@@ -50,8 +53,8 @@ function adaptiveSimpson(
   f: (x: number) => number,
   a: number,
   b: number,
-  tol: number = 1e-4,
-  maxRecursion: number = 14
+  tol: number = 1e-3,
+  maxRecursion: number = 7
 ): number {
   const h = b - a;
   if (Math.abs(h) < 1e-12) return 0;
@@ -212,7 +215,7 @@ export class RankDynamicsAnalyzer {
   public static calculate_base_params(stats: PlayerStats): BaseParams {
     let p_val = stats.P_bar;
     if (p_val > 1.0) p_val = p_val / 100.0;
-    const P_bar = Math.min(0.999, Math.max(0.001, p_val));
+    const P_bar = Math.min(0.99, Math.max(0.01, p_val));
 
     const N = Math.max(0, stats.N || 0);
     const PS = Math.max(0, stats.P_5 || 0);
@@ -220,28 +223,32 @@ export class RankDynamicsAnalyzer {
     const SV = Math.max(0, stats.S_v || 0);
 
     // 1. 场均能量 M_EP = (10*PS + 6*G + 3*SV) / N
-    let M_EP = N > 0 ? (10.0 * PS + 6.0 * G + 3.0 * SV) / N : 0.0;
-    M_EP = Math.max(0.01, M_EP); // 兜底保护
+    const M_EP = N > 0 ? (10.0 * PS + 6.0 * G + 3.0 * SV) / N : 0.0;
 
     // 2. 动态 ELO 常数 k_F = 450 * (1.8 / (M_EP * P_bar))
-    const k_F = 450.0 * (1.8 / (M_EP * P_bar));
+    // 严格保留纯数学公式，仅做除零最小防崩溃保护 (1e-6)
+    const effectiveMEP = Math.max(1e-6, M_EP);
+    const effectivePbar = Math.max(1e-6, Math.min(1.0 - 1e-6, P_bar));
+    const k_F = 450.0 * (1.8 / (effectiveMEP * effectivePbar));
 
     return { P_bar, M_EP, k_F };
   }
 
   /**
    * 全量微积分动力学算法
-   * 将积分起点提高到定级赛分数 S_placement，场次视为减去 5 场（N_eff = N - 5）
-   * 严格按照微积分方程 N_eff = \int_{S_placement}^{S_present} (1/v) ds 求根
+   * 起始基准分数 S_placement：
+   * - 若为定级赛分数 (baselineType === 'placement')：扣除5场定级赛（N_eff = N - 5）
+   * - 若为继承分数 (baselineType === 'inherited')：从继承分数开始积分，不扣除5场（N_eff = N）
    */
   public static run_dynamics(stats: PlayerStats): CalculationResult {
     const { P_bar, M_EP, k_F } = this.calculate_base_params(stats);
     const S_placement = typeof stats.S_placement === 'number' && stats.S_placement > 0 ? stats.S_placement : this.S_0;
+    const isInherited = stats.baselineType === 'inherited';
     const rawN = Math.max(1, stats.N || 1);
-    const N_eff = Math.max(1, rawN - 5); // 扣除5场定级赛后的有效爬分场次
+    const N_eff = isInherited ? rawN : Math.max(1, rawN - 5);
     const S_present = stats.S_final && stats.S_final > 0 ? stats.S_final : S_placement;
 
-    // 简易闭式解兜底器（当微分方程无实数解时启动）
+    // 简易闭式解兜底器（当微分方程无实数解或极端工况时启动）
     const runFallback = (): number => {
       const C_1 = 30.0;
       const C_2 = 15.0;
@@ -249,7 +256,7 @@ export class RankDynamicsAnalyzer {
       const k_present = this.get_k_s(S_present_eff);
       const v_E = M_EP / k_present;
       const v_eff = (S_present_eff - S_placement) / N_eff;
-      const P_eff = Math.min(0.999, Math.max(0.001, (v_eff + C_2 - v_E) / C_1));
+      const P_eff = Math.min(1.0 - 1e-6, Math.max(1e-6, (v_eff + C_2 - v_E) / C_1));
       return S_present_eff - k_F * Math.log10(1.0 / P_eff - 1.0);
     };
 
@@ -331,16 +338,16 @@ export class RankDynamicsAnalyzer {
       return totalIntegral - N_eff;
     };
 
-    // 使用 brentq (数值求根) 试出答案
-    let lower_bound = Math.max(800.0, Math.min(S_placement, S_present) - 1000.0);
-    let upper_bound = Math.max(S_placement, S_present) + 1000.0;
+    // 使用 brentq (数值求根) 试出答案：支持大跨度发散搜索
+    let lower_bound = Math.min(S_placement, S_present) - 2000.0;
+    let upper_bound = Math.max(S_placement, S_present) + 2000.0;
 
     let fLow = objectiveFunc(lower_bound);
     let fHigh = objectiveFunc(upper_bound);
 
     if (fLow * fHigh > 0) {
-      lower_bound = Math.max(400.0, Math.min(S_placement, S_present) - 1800.0);
-      upper_bound = Math.max(S_placement, S_present) + 1800.0;
+      lower_bound = Math.min(S_placement, S_present) - 6000.0;
+      upper_bound = Math.max(S_placement, S_present) + 6000.0;
       fLow = objectiveFunc(lower_bound);
       fHigh = objectiveFunc(upper_bound);
     }
