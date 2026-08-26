@@ -16,6 +16,7 @@ export interface PlayerStats {
   P_5: number;         // 五连绝世数 (PS)
   G: number;           // 顶级牌 + 金牌数 (G)
   S_v: number;         // 银牌数 (SV)
+  S_placement?: number;// 定级赛分数 (S_placement / S_0)，默认 1400
   mvp_count?: number;  // 兼容字段
   gamma_role?: number; // 兼容字段
 }
@@ -193,7 +194,7 @@ function brentq(
 }
 
 export class RankDynamicsAnalyzer {
-  public static S_0 = 1200.0; // 赛季初继承基准分
+  public static S_0 = 1400.0; // 默认定级赛基准分
 
   /**
    * 能量抵扣系数分段函数 k(s)
@@ -229,14 +230,16 @@ export class RankDynamicsAnalyzer {
   }
 
   /**
-   * 全量微积分动力学算法 (zxz的智慧结晶（新）)
-   * 严格按照微积分方程 N = \int (1/v) ds 求根
+   * 全量微积分动力学算法
+   * 将积分起点提高到定级赛分数 S_placement，场次视为减去 5 场（N_eff = N - 5）
+   * 严格按照微积分方程 N_eff = \int_{S_placement}^{S_present} (1/v) ds 求根
    */
   public static run_dynamics(stats: PlayerStats): CalculationResult {
     const { P_bar, M_EP, k_F } = this.calculate_base_params(stats);
-    const S_0 = this.S_0;
-    const N = Math.max(1, stats.N || 1);
-    const S_present = Math.max(S_0, stats.S_final || S_0);
+    const S_placement = typeof stats.S_placement === 'number' && stats.S_placement > 0 ? stats.S_placement : this.S_0;
+    const rawN = Math.max(1, stats.N || 1);
+    const N_eff = Math.max(1, rawN - 5); // 扣除5场定级赛后的有效爬分场次
+    const S_present = stats.S_final && stats.S_final > 0 ? stats.S_final : S_placement;
 
     // 简易闭式解兜底器（当微分方程无实数解时启动）
     const runFallback = (): number => {
@@ -245,14 +248,14 @@ export class RankDynamicsAnalyzer {
       const S_present_eff = S_present;
       const k_present = this.get_k_s(S_present_eff);
       const v_E = M_EP / k_present;
-      const v_eff = (S_present_eff - S_0) / N;
+      const v_eff = (S_present_eff - S_placement) / N_eff;
       const P_eff = Math.min(0.999, Math.max(0.001, (v_eff + C_2 - v_E) / C_1));
       return S_present_eff - k_F * Math.log10(1.0 / P_eff - 1.0);
     };
 
     // 【物理熔断校验】：检测“挑战赛严重注水”导致的超光速异常
     const max_v = 15.0 + 6.0 / 1.0; // 绝对物理极限速度 (~21分/场)
-    if ((S_present - S_0) / max_v > N) {
+    if ((S_present - S_placement) / max_v > N_eff) {
       const fallbackR = runFallback();
       const water = S_present - fallbackR;
       const k_cur = this.get_k_s(S_present);
@@ -268,9 +271,9 @@ export class RankDynamicsAnalyzer {
         k_cur,
         win_rates: this._get_win_rate_list(fallbackR, k_F, S_present),
         tier_win_rates: this._get_tier_win_rates(fallbackR, k_F, S_present),
-        tips: '⚠️ 触发物理熔断（爬分所需最小物理场次 > 实际场次，场外加分过多），已自动启用闭式保底测算',
+        tips: '⚠️ 触发物理熔断（爬分所需最小物理场次 > 实际有效场次，场外加分过多），已自动启用闭式保底测算',
         isFallback: true,
-        fallbackReason: '实际场次比物理极限最小场次还少，说明含有较多周末巅峰挑战赛等场外积分。',
+        fallbackReason: '实际有效场次比物理极限最小场次还少，说明含有较多周末巅峰挑战赛等场外积分。',
       };
     }
 
@@ -293,23 +296,27 @@ export class RankDynamicsAnalyzer {
 
     // 分段切片：依据 1200, 1500, 1800, 2100 阶梯跃迁点做自适应积分
     const tierBreaks = [1200, 1500, 1800, 2100, Infinity];
+    const isAscending = S_present >= S_placement;
+    const startScore = Math.min(S_placement, S_present);
+    const endScore = Math.max(S_placement, S_present);
+
     const subIntervals: [number, number][] = [];
     for (let i = 0; i < tierBreaks.length - 1; i++) {
-      const a = Math.max(1200, tierBreaks[i]);
-      const b = Math.min(S_present, tierBreaks[i + 1]);
+      const a = Math.max(startScore, tierBreaks[i]);
+      const b = Math.min(endScore, tierBreaks[i + 1]);
       if (b > a) {
         subIntervals.push([a, b]);
       }
     }
 
-    // ② 定义积分目标函数 f(S_true) = \int_{1200}^{S_present} (1/v) ds - N = 0
+    // ② 定义积分目标函数 f(S_true) = \int_{S_placement}^{S_present} (1/v) ds - N_eff = 0
     const objectiveFunc = (S_true_guess: number): number => {
       let totalIntegral = 0;
       for (const [a, b] of subIntervals) {
         const segIntegral = adaptiveSimpson(
           (s: number) => {
             const v = velocity(s, S_true_guess);
-            return 1.0 / Math.max(0.001, v);
+            return 1.0 / (Math.abs(v) < 1e-4 ? (v >= 0 ? 1e-4 : -1e-4) : v);
           },
           a,
           b,
@@ -318,19 +325,22 @@ export class RankDynamicsAnalyzer {
         );
         totalIntegral += segIntegral;
       }
-      return totalIntegral - N;
+      if (!isAscending) {
+        totalIntegral = -totalIntegral;
+      }
+      return totalIntegral - N_eff;
     };
 
     // 使用 brentq (数值求根) 试出答案
-    let lower_bound = Math.max(800.0, S_present - 1000.0);
-    let upper_bound = S_present + 1000.0;
+    let lower_bound = Math.max(800.0, Math.min(S_placement, S_present) - 1000.0);
+    let upper_bound = Math.max(S_placement, S_present) + 1000.0;
 
     let fLow = objectiveFunc(lower_bound);
     let fHigh = objectiveFunc(upper_bound);
 
     if (fLow * fHigh > 0) {
-      lower_bound = Math.max(400.0, S_present - 1800.0);
-      upper_bound = S_present + 1800.0;
+      lower_bound = Math.max(400.0, Math.min(S_placement, S_present) - 1800.0);
+      upper_bound = Math.max(S_placement, S_present) + 1800.0;
       fLow = objectiveFunc(lower_bound);
       fHigh = objectiveFunc(upper_bound);
     }
@@ -453,6 +463,237 @@ export class RankDynamicsAnalyzer {
         rate: p * 100,
       };
     });
+  }
+
+  /**
+   * 计算指定巅峰分下的净上分速度 v(s) = ds/dN
+   */
+  public static get_velocity(
+    s: number,
+    S_true: number,
+    P_bar: number,
+    M_EP: number,
+    k_F: number
+  ): number {
+    const P_s = 1.0 / (1.0 + Math.pow(10.0, (s - S_true) / k_F));
+    const k_s = this.get_k_s(s);
+    let dE_dN: number;
+    if (P_s <= P_bar) {
+      dE_dN = (M_EP / P_bar) * P_s;
+    } else {
+      dE_dN = ((6.0 - M_EP) / Math.max(1e-4, 1.0 - P_bar)) * (P_s - 1.0) + 6.0;
+    }
+    return 30.0 * P_s - 15.0 + (dE_dN / k_s);
+  }
+
+  /**
+   * 计算从定级赛开始（含定级赛5场）累计到达指定分数 s 所需的理论总场数
+   */
+  public static get_cumulative_matches(
+    s: number,
+    S_placement: number,
+    S_true: number,
+    P_bar: number,
+    M_EP: number,
+    k_F: number,
+    S_max: number
+  ): number {
+    if (s <= S_placement) {
+      if (s === S_placement) return 5.0;
+      // 低于定级赛分数（掉分场次）
+      const tierBreaks = [1200, 1500, 1800, 2100, Infinity];
+      let integral = 0;
+      for (let i = 0; i < tierBreaks.length - 1; i++) {
+        const a = Math.max(s, tierBreaks[i]);
+        const b = Math.min(S_placement, tierBreaks[i + 1]);
+        if (b > a) {
+          integral += adaptiveSimpson(
+            (x) => {
+              const v = this.get_velocity(x, S_true, P_bar, M_EP, k_F);
+              return 1.0 / (Math.abs(v) < 1e-4 ? (v >= 0 ? 1e-4 : -1e-4) : v);
+            },
+            a,
+            b,
+            1e-3,
+            10
+          );
+        }
+      }
+      return Math.max(0, 5.0 - integral);
+    }
+
+    if (s >= S_max - 0.05) {
+      return Infinity;
+    }
+
+    const tierBreaks = [1200, 1500, 1800, 2100, Infinity];
+    let integral = 0;
+    for (let i = 0; i < tierBreaks.length - 1; i++) {
+      const a = Math.max(S_placement, tierBreaks[i]);
+      const b = Math.min(s, tierBreaks[i + 1]);
+      if (b > a) {
+        integral += adaptiveSimpson(
+          (x) => {
+            const v = this.get_velocity(x, S_true, P_bar, M_EP, k_F);
+            return 1.0 / Math.max(1e-4, v);
+          },
+          a,
+          b,
+          1e-3,
+          10
+        );
+      }
+    }
+    return 5.0 + integral;
+  }
+
+  /**
+   * 目标分数 -> 计算距离当前分数还需要打多少场
+   */
+  public static calculate_delta_matches_for_target(
+    S_current: number,
+    S_target: number,
+    S_true: number,
+    P_bar: number,
+    M_EP: number,
+    k_F: number,
+    S_max: number
+  ): {
+    reachable: boolean;
+    deltaMatches: number;
+    targetWinRate: number;
+    targetVelocity: number;
+    reason?: string;
+  } {
+    const targetWinRate = (1.0 / (1.0 + Math.pow(10.0, (S_target - S_true) / k_F))) * 100;
+    const targetVelocity = this.get_velocity(S_target, S_true, P_bar, M_EP, k_F);
+
+    if (S_target >= S_max) {
+      return {
+        reachable: false,
+        deltaMatches: Infinity,
+        targetWinRate,
+        targetVelocity,
+        reason: `目标分 (${S_target}) ≥ 理论最高平衡分 (${S_max.toFixed(1)})，速度 ds/dN ≤ 0，无法单纯依靠场次积累达到`,
+      };
+    }
+
+    if (Math.abs(S_target - S_current) < 0.1) {
+      return {
+        reachable: true,
+        deltaMatches: 0,
+        targetWinRate,
+        targetVelocity,
+      };
+    }
+
+    const start = Math.min(S_current, S_target);
+    const end = Math.max(S_current, S_target);
+    const tierBreaks = [1200, 1500, 1800, 2100, Infinity];
+    let integral = 0;
+    for (let i = 0; i < tierBreaks.length - 1; i++) {
+      const a = Math.max(start, tierBreaks[i]);
+      const b = Math.min(end, tierBreaks[i + 1]);
+      if (b > a) {
+        integral += adaptiveSimpson(
+          (x) => {
+            const v = this.get_velocity(x, S_true, P_bar, M_EP, k_F);
+            return 1.0 / Math.max(1e-4, v);
+          },
+          a,
+          b,
+          1e-3,
+          10
+        );
+      }
+    }
+
+    const deltaMatches = S_target >= S_current ? integral : -integral;
+    return {
+      reachable: true,
+      deltaMatches: Number(deltaMatches.toFixed(1)),
+      targetWinRate,
+      targetVelocity,
+    };
+  }
+
+  /**
+   * 设定计划加打场数 -> 求解可达到的目标巅峰分
+   */
+  public static calculate_target_score_from_delta_matches(
+    S_current: number,
+    deltaMatches: number,
+    S_true: number,
+    P_bar: number,
+    M_EP: number,
+    k_F: number,
+    S_max: number
+  ): {
+    targetScore: number;
+    targetWinRate: number;
+    targetVelocity: number;
+    isApproachingMax: boolean;
+  } {
+    if (deltaMatches <= 0) {
+      const winRate = (1.0 / (1.0 + Math.pow(10.0, (S_current - S_true) / k_F))) * 100;
+      const velocity = this.get_velocity(S_current, S_true, P_bar, M_EP, k_F);
+      return {
+        targetScore: S_current,
+        targetWinRate: winRate,
+        targetVelocity: velocity,
+        isApproachingMax: false,
+      };
+    }
+
+    const upperScore = S_max - 0.05;
+    if (S_current >= upperScore) {
+      const winRate = (1.0 / (1.0 + Math.pow(10.0, (upperScore - S_true) / k_F))) * 100;
+      return {
+        targetScore: Number(upperScore.toFixed(1)),
+        targetWinRate: winRate,
+        targetVelocity: 0,
+        isApproachingMax: true,
+      };
+    }
+
+    // 单调二分搜索 S_target
+    let low = S_current;
+    let high = upperScore;
+    let bestScore = S_current;
+
+    for (let iter = 0; iter < 40; iter++) {
+      const mid = (low + high) / 2;
+      const res = this.calculate_delta_matches_for_target(
+        S_current,
+        mid,
+        S_true,
+        P_bar,
+        M_EP,
+        k_F,
+        S_max
+      );
+
+      if (Math.abs(res.deltaMatches - deltaMatches) < 0.2) {
+        bestScore = mid;
+        break;
+      }
+      if (res.deltaMatches < deltaMatches) {
+        bestScore = mid;
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+
+    const finalWinRate = (1.0 / (1.0 + Math.pow(10.0, (bestScore - S_true) / k_F))) * 100;
+    const finalVelocity = this.get_velocity(bestScore, S_true, P_bar, M_EP, k_F);
+
+    return {
+      targetScore: Number(bestScore.toFixed(1)),
+      targetWinRate: finalWinRate,
+      targetVelocity: finalVelocity,
+      isApproachingMax: bestScore >= S_max - 2.0,
+    };
   }
 }
 

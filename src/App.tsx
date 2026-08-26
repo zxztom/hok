@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { solveDynamics, PlayerStats, CalculationResult, RankDynamicsAnalyzer } from './engine';
 import AlgorithmManual from './components/AlgorithmManual';
 import WinRateChart from './components/WinRateChart';
+import ScoreMatchesChart from './components/ScoreMatchesChart';
 
 interface ExampleProfile {
   id: string;
@@ -13,7 +14,7 @@ interface ExampleProfile {
   desc?: string;
 }
 
-// 精选实战纯客观战绩示例
+// 精选实战纯客观战绩示例（定级赛分数均按1400分计算）
 const EXAMPLES: ExampleProfile[] = [
   {
     id: 'ex-1',
@@ -25,11 +26,12 @@ const EXAMPLES: ExampleProfile[] = [
       N: 237,
       P_bar: 0.620,
       S_final: 2410.0,
+      S_placement: 1400.0,
       G: 35,
       S_v: 25,
       P_5: 0,
     },
-    desc: '重庆狼队·紫幻（237场 62.0% 2410分，金35 / 银25 / 五杀0）',
+    desc: '重庆狼队·紫幻（定级1400分，237场 62.0% 2410分，金35 / 银25 / 五杀0）',
   },
   {
     id: 'ex-zongshi',
@@ -41,11 +43,12 @@ const EXAMPLES: ExampleProfile[] = [
       N: 111,
       P_bar: 0.838,
       S_final: 2503.0,
+      S_placement: 1400.0,
       G: 41, // 顶级7 + 金34 = 41
       S_v: 24,
       P_5: 0,
     },
-    desc: '宗师 2503分（111场 83.8% 超高胜率通天野王，顶级7 / 金34 / 银24）',
+    desc: '宗师 2503分（定级1400分，111场 83.8% 超高胜率通天野王，顶级7 / 金34 / 银24）',
   },
   {
     id: 'ex-qingyan',
@@ -57,11 +60,12 @@ const EXAMPLES: ExampleProfile[] = [
       N: 143,
       P_bar: 0.671,
       S_final: 2248.0,
+      S_placement: 1400.0,
       G: 31, // 顶级3 + 金28 = 31
       S_v: 25,
       P_5: 0,
     },
-    desc: 'KSG青炎 2248分（143场 67.1%，顶级3 / 金28 / 银25）',
+    desc: 'KSG青炎 2248分（定级1400分，143场 67.1%，顶级3 / 金28 / 银25）',
   },
   {
     id: 'ex-xiaomai',
@@ -73,11 +77,12 @@ const EXAMPLES: ExampleProfile[] = [
       N: 176,
       P_bar: 0.659,
       S_final: 2413.0,
+      S_placement: 1400.0,
       G: 46, // 顶级4 + 金42 = 46
       S_v: 36,
       P_5: 1, // 五杀1
     },
-    desc: '小麦 2413分（176场 65.9%，顶级4 / 金42 / 银36 / 五杀1）',
+    desc: '小麦 2413分（定级1400分，176场 65.9%，顶级4 / 金42 / 银36 / 五杀1）',
   },
   {
     id: 'ex-jiushu',
@@ -89,11 +94,12 @@ const EXAMPLES: ExampleProfile[] = [
       N: 261,
       P_bar: 0.613,
       S_final: 2304.0,
+      S_placement: 1400.0,
       G: 35, // 顶级4 + 金31 = 35
       S_v: 31,
       P_5: 0,
     },
-    desc: '救赎 2304分（261场 61.3% 职业辅助，顶级4 / 金31 / 银31）',
+    desc: '救赎 2304分（定级1400分，261场 61.3% 职业辅助，顶级4 / 金31 / 银31）',
   },
   {
     id: 'ex-yinuo',
@@ -105,11 +111,12 @@ const EXAMPLES: ExampleProfile[] = [
       N: 226,
       P_bar: 0.606,
       S_final: 2277.0,
+      S_placement: 1400.0,
       G: 50, // 顶级3 + 金47 = 50
       S_v: 37,
       P_5: 1, // 五杀1
     },
-    desc: '一诺 2277分（226场 60.6% 顶级射手大核，顶级3 / 金47 / 银37 / 五杀1）',
+    desc: '一诺 2277分（定级1400分，226场 60.6% 顶级射手大核，顶级3 / 金47 / 银37 / 五杀1）',
   },
   {
     id: 'ex-daozai',
@@ -121,16 +128,18 @@ const EXAMPLES: ExampleProfile[] = [
       N: 560,
       P_bar: 0.559,
       S_final: 2230.0,
+      S_placement: 1400.0,
       G: 62, // 顶级3 + 金59 = 62
       S_v: 52,
       P_5: 1, // 五杀1
     },
-    desc: '道崽 2230分（560场 55.9% 高场次战神，顶级3 / 金59 / 银52 / 五杀1）',
+    desc: '道崽 2230分（定级1400分，560场 55.9% 高场次战神，顶级3 / 金59 / 银52 / 五杀1）',
   },
 ];
 
 interface RawFormInputs {
   S_final: string;
+  S_placement: string;
   N: string;
   P_bar: string;
   P_5: string;
@@ -139,9 +148,10 @@ interface RawFormInputs {
 }
 
 export default function App() {
-  // 进入时的输入框清空
+  // 进入时的输入框状态（定级赛默认1400，其余待输入）
   const [rawInputs, setRawInputs] = useState<RawFormInputs>({
     S_final: '',
+    S_placement: '1400',
     N: '',
     P_bar: '',
     P_5: '',
@@ -161,6 +171,7 @@ export default function App() {
   const loadExample = (ex: ExampleProfile) => {
     setRawInputs({
       S_final: String(ex.stats.S_final),
+      S_placement: String(ex.stats.S_placement || 1400),
       N: String(ex.stats.N),
       P_bar: ex.rawPBar,
       P_5: String(ex.stats.P_5),
@@ -170,10 +181,11 @@ export default function App() {
     setActiveExId(ex.id);
   };
 
-  // 清空应该把输入框清空，不是填0或者分数
+  // 清空输入框
   const clearInputs = () => {
     setRawInputs({
       S_final: '',
+      S_placement: '',
       N: '',
       P_bar: '',
       P_5: '',
@@ -186,6 +198,7 @@ export default function App() {
   // 解析输入并检验是否就绪
   const parsedInputs: PlayerStats = useMemo(() => {
     const S_final = parseFloat(rawInputs.S_final) || 0;
+    const S_placement = parseFloat(rawInputs.S_placement) || 1400;
     const N = parseInt(rawInputs.N, 10) || 0;
     const pNum = parseFloat(rawInputs.P_bar) || 0;
     const P_bar = pNum > 1 ? pNum / 100 : pNum;
@@ -195,6 +208,7 @@ export default function App() {
 
     return {
       S_final,
+      S_placement,
       N,
       P_bar,
       P_5,
@@ -308,7 +322,7 @@ export default function App() {
           <div>
             <strong style={{ color: '#38bdf8' }}>提示：</strong>
             <span>
-              挑战赛使分数预测偏高。实力分指的是胜率50%的分数。理论巅峰最高分是会无限场次趋近值。真最高分会更高。
+              定级赛（5场）打完后的初始分数即为定级赛分数（默认1400），算法以此为积分起点，积分阶段按 (N - 5) 场计算。挑战赛会使分数预测偏高。
             </span>
           </div>
         </div>
@@ -695,10 +709,36 @@ export default function App() {
               />
             </div>
 
-            {/* 2. N */}
+            {/* 2. S_placement (定级赛分数) */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label htmlFor="input-S_placement" style={{ fontWeight: '500', color: '#e2e8f0' }}>
+                2. 定级赛分数 (S_init)
+              </label>
+              <input
+                id="input-S_placement"
+                type="number"
+                step="1"
+                placeholder="默认1400"
+                value={rawInputs.S_placement}
+                onChange={(e) => handleInputChange('S_placement', e.target.value)}
+                style={{
+                  backgroundColor: '#1e293b',
+                  color: '#ffffff',
+                  border: '1px solid #38bdf8',
+                  borderRadius: '4px',
+                  padding: '6px 10px',
+                  width: '120px',
+                  textAlign: 'right',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                }}
+              />
+            </div>
+
+            {/* 3. N */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-N" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                2. 总场次 (N)
+                3. 总场次 (N, 含定级赛)
               </label>
               <input
                 id="input-N"
@@ -720,10 +760,10 @@ export default function App() {
               />
             </div>
 
-            {/* 3. P_bar */}
+            {/* 4. P_bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-P_bar" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                3. 面板胜率 (<span style={{ textDecoration: 'overline', textDecorationThickness: '1.5px', textUnderlineOffset: '2px' }}>P(s)</span>)
+                4. 面板胜率 (<span style={{ textDecoration: 'overline', textDecorationThickness: '1.5px', textUnderlineOffset: '2px' }}>P(s)</span>)
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <input
@@ -747,10 +787,10 @@ export default function App() {
               </div>
             </div>
 
-            {/* 4. PS (五连绝世) */}
+            {/* 5. PS (五连绝世) */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-P_5" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                4. 五连绝世数 (PS)
+                5. 五连绝世数 (PS)
               </label>
               <input
                 id="input-P_5"
@@ -772,10 +812,10 @@ export default function App() {
               />
             </div>
 
-            {/* 5. G (顶级牌+金牌) */}
+            {/* 6. G (顶级牌+金牌) */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-G" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                5. 顶级牌 + 金牌数 (G)
+                6. 顶级牌 + 金牌数 (G)
               </label>
               <input
                 id="input-G"
@@ -797,10 +837,10 @@ export default function App() {
               />
             </div>
 
-            {/* 6. SV (银牌) */}
+            {/* 7. SV (银牌) */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label htmlFor="input-S_v" style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                6. 银牌数 (SV)
+                7. 银牌数 (SV)
               </label>
               <input
                 id="input-S_v"
@@ -823,6 +863,19 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {/* 场数与分数对应全景动力学轨迹图 + 目标分数与场次双向测算器 */}
+        <ScoreMatchesChart
+          hasData={isReady && result !== null}
+          STrue={result ? result.R_true : 0}
+          SPresent={parsedInputs.S_final}
+          SPlacement={parsedInputs.S_placement || 1400}
+          SMax={result ? result.S_max : 0}
+          kF={result ? result.k_F : 450}
+          PBar={baseParams.P_bar}
+          MEP={baseParams.M_EP}
+          currentN={parsedInputs.N}
+        />
 
         {/* 各巅峰分段单局胜率预测看板 (交互式图表 + 数据明细) */}
         <WinRateChart

@@ -31,8 +31,9 @@ $$M_{E/P} = \\frac{10\\text{PS} + 6\\text{G} + 3\\text{SV}}{N}$$
 * **积分微分关系：**
   $$\\frac{ds}{dN} = 30P(s) - 15 + \\frac{\\frac{dE}{dN}}{k(s)}$$
 
-* **场数 $N$ 闭式路径积分方程：**
-  $$N = \\int_{1200}^{S_{present}} \\left( \\frac{1}{30P(s) - 15 + \\dfrac{\\frac{dE}{dN}}{k(s)}} \\right) ds$$
+* **积分阶段有效场数 $N - 5$ 闭式路径积分方程：**
+  $$N - 5 = \\int_{S_{placement}}^{S_{present}} \\left( \\frac{1}{30P(s) - 15 + \\dfrac{\\frac{dE}{dN}}{k(s)}} \\right) ds$$
+  *(注：定级赛5场打完后的初始积分为 $S_{placement}$，后续积分爬升阶段场次为 $N - 5$)*
 
 ---
 
@@ -51,7 +52,7 @@ $$k(s) = \\begin{cases} 1 & S \\in [1200, 1500) \\\\ 2 & S \\in [1500, 1800) \\\
 ### **⑥ 求解结构说明**
 
 **已知输入：**
-$$\\begin{cases} \\overset{\\text{PS}}{\\text{五杀/诛}}、\\overset{\\text{G}}{\\text{金}}、\\overset{\\text{SV}}{\\text{银}} \\\\[1ex] \\text{场数 } N \\\\[1ex] \\text{面板胜率 } \\overline{P(s)} \\\\[1ex] \\text{当前巅峰分 } S_{present} \\end{cases}$$
+$$\\begin{cases} \\overset{\\text{PS}}{\\text{五杀/诛}}、\\overset{\\text{G}}{\\text{金}}、\\overset{\\text{SV}}{\\text{银}} \\\\[1ex] \\text{总场数 } N \\text{ (含定级赛5场)} \\\\[1ex] \\text{面板胜率 } \\overline{P(s)} \\\\[1ex] \\text{定级赛分数 } S_{placement} \\text{ (默认1400)} \\\\[1ex] \\text{当前巅峰分 } S_{present} \\end{cases}$$
 
 **逆推解出：**
 * $S_{true}$（真实竞技硬实力分 · 胜率50%均势基准分）
